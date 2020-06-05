@@ -775,15 +775,15 @@ namespace Snoop.Infrastructure
                 }
             }
 
+            // sort the properties before adding potential collection items
+            properties.Sort();
+
             //delve path. also, issue 4919
             var extendedProps = GetExtendedProperties(obj);
             if (extendedProps != null)
             {
-                properties.AddRange(extendedProps);
+                properties.InsertRange(0, extendedProps);
             }
-
-            // sort the properties before adding potential collection items
-            properties.Sort();
 
             // if the object is a collection, add the items in the collection as properties
             if (obj is ICollection collection)
@@ -804,22 +804,31 @@ namespace Snoop.Infrastructure
         /// <summary>
         /// 4919 + Delve
         /// </summary>
-        /// <param name="obj"></param>
         /// <returns></returns>
         private static IList<PropertyInformation> GetExtendedProperties(object obj)
         {
-            if (obj is null
-                || ResourceKeyCache.Contains(obj) == false)
+            if (obj is null)
             {
                 return null;
             }
 
-            var key = ResourceKeyCache.GetKey(obj);
-            var prop = new PropertyInformation(key, new object(), "x:Key", key, true);
-            return new List<PropertyInformation>
+            if (ResourceKeyCache.Contains(obj))
             {
-                prop
-            };
+                var key = ResourceKeyCache.GetKey(obj);
+                var prop = new PropertyInformation(key, null, "x:Key", key, isCopyable: true);
+                return new List<PropertyInformation>
+                {
+                    prop
+                };
+            }
+
+            if (obj is string
+                || obj.GetType().IsValueType)
+            {
+                return new List<PropertyInformation> { new PropertyInformation(obj, null, "ToString", obj, isCopyable: true) };
+            }
+
+            return null;
         }
 
         private static List<PropertyDescriptor> GetAllProperties(object obj, Attribute[] attributes)
