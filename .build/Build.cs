@@ -100,16 +100,22 @@ class Build : NukeBuild
         .DependsOn(Restore)
         .Executes(() => {
             MSBuild(s => s
-                .SetProjectFile(Solution)
+                .SetProjectFile(RootDirectory / "Snoop.GenericInjector/Snoop.GenericInjector.vcxproj")
                 .SetConfiguration(Configuration)
+                .SetTargetPlatform(MSBuildTargetPlatform.Win32)
+                .SetAssemblyVersion(GitVersion.AssemblySemVer)
+                .SetInformationalVersion(GitVersion.InformationalVersion)
+                .DisableRestore()
+                .SetVerbosity(MSBuildVerbosity.Minimal));
+
+            DotNetBuild(s => s
+                .SetProjectFile(Solution)
+                .SetConfiguration("CI_" + Configuration)
                 .SetAssemblyVersion(GitVersion.AssemblySemVer)
                 .SetFileVersion(GitVersion.AssemblySemVer)
                 .SetInformationalVersion(GitVersion.InformationalVersion)
                 
-                .SetNodeReuse(false)
-                .SetMaxCpuCount(1)
-                .SetRestoreDisableParallel(true)
-                .SetVerbosity(MSBuildVerbosity.Minimal));
+                .SetVerbosity(DotNetVerbosity.Minimal));
         });
 
     Target Pack => _ => _
