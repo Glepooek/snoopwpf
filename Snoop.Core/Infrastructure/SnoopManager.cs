@@ -267,8 +267,7 @@
                 return targetWindow.Title;
             }
 
-            if (Application.Current != null
-                && Application.Current.MainWindow != null)
+            if (Application.Current?.MainWindow?.CheckAccess() == true)
             {
                 return Application.Current.MainWindow.Title;
             }
@@ -358,6 +357,22 @@
                     thread.Start(new DispatchOutParameters(settingsData, instanceCreator, rootVisuals));
 
                     // todo: check if we really created something
+                    return true;
+                }
+                else // User didn't want to enter multiple dispatcher mode.
+                {
+                    var dispatcher = Application.Current?.Dispatcher ?? rootVisuals[0].Dispatcher;
+
+                    dispatcher.Invoke((Action)(() =>
+                    {
+                        var snoopInstance = instanceCreator(settingsData, dispatcher);
+
+                        if (snoopInstance.Target is null)
+                        {
+                            snoopInstance.Target = rootVisuals.FirstOrDefault(x => x.Dispatcher == dispatcher);
+                        }
+                    }));
+
                     return true;
                 }
             }
