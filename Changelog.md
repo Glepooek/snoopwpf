@@ -15,6 +15,8 @@
   - [#156](../../issues/156) - Delve BindingExpression throws exception
   - [#159](../../issues/159) - Errors require STA
   - [#177](../../issues/177) - Could not query process information.
+  - [#188](../../issues/188) - Crash when inspecting app with VisualTargetPresentationSource from ModernWpf
+
   - Snoop now properly selects the targeted window on startup
   - Snooping multiple app domains now also works for app domains that use shadow copies of assemblies
   - Snooping multiple app domains now also checks for multiple dispatchers in each app domain
@@ -45,6 +47,7 @@
   - [#161](../../issues/161) - Drastically improved performance of AppChooser.Refresh() (thanks @mikel785)
   - [#162](../../issues/162) - Usability improvements for process dropdown (thanks @mikel785)
   - [#181](../../issues/181) - Add inspection of Popup without opening it
+  - [#190](../../issues/190) - Events view - editible events history max count (thanks @X39)
 
 ## 2.11.0
 

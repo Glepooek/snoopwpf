@@ -41,9 +41,10 @@ Highlights:
   - Holding CTRL + SHIFT does not skip template parts
 - Drastically improved performance of AppChooser.Refresh() (thanks @mikel785)
 - Usability improvements for process dropdown (thanks @mikel785)
-- Support for displaying the logical tree and the tree of wpf automation peers
+- Support for displaying the logical tree and the tree of WPF automation peers
 - Ability to inspect `Popup` without opening it
 - `Snoop.exe` and the inject laucnher now support commandline args
+- Global hotkey support (just start snoop, focus a WPF application and hit CTRL + WIN + ALT + F12)
 
 Known issues:
 
@@ -90,8 +91,12 @@ As part of the process of moving to Visual Studio 2019, we have dropped support 
 
 ## How do i build Snoop?
 
-Just open `Snoop.sln` with Visual Studio 2019 (16.6 or later) and build it.
+Just open `Snoop.sln` with Visual Studio 2019 (16.7 or later) and build it.
 Please note that you need the Visual Studio 2019 C++ payload and in case you are using a later version you also need the VC++ 142 payload.
+
+Requirements:
+- Visual Studio 2019 16.7 (including C++ payload)
+- .NET Core SDK 3.1.400
 
 ## Contributors
 

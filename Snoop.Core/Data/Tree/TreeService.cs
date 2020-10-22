@@ -51,8 +51,8 @@
                     treeItem = new WindowTreeItem(window, parent, this);
                     break;
 
-                case Popup poup:
-                    treeItem = new PopupTreeItem(poup, parent, this);
+                case Popup popup:
+                    treeItem = new PopupTreeItem(popup, parent, this);
                     break;
 
                 case DependencyObject dependencyObject:
@@ -88,7 +88,7 @@
             {
                 case TreeType.Visual:
                     return new VisualTreeService();
-                    
+
                 case TreeType.Logical:
                     return new LogicalTreeService();
 
@@ -97,6 +97,18 @@
                 default:
                     throw new ArgumentOutOfRangeException(nameof(treeType), treeType, null);
             }
+        }
+    }
+
+    public sealed class RawTreeServiceWithoutChildren : TreeService
+    {
+        public static readonly RawTreeServiceWithoutChildren DefaultInstance = new RawTreeServiceWithoutChildren();
+
+        public override TreeType TreeType { get; } = TreeType.Visual;
+
+        public override IEnumerable GetChildren(object target)
+        {
+            yield break;
         }
     }
 

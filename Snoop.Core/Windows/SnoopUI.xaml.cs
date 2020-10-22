@@ -445,6 +445,8 @@ namespace Snoop.Windows
                     if (treeItem != null)
                     {
                         this.CurrentSelection = treeItem;
+                        this.PropertyGrid.PropertyGrid.RefreshPropertyGrid();
+
                         if (previousSelection.IsExpanded)
                         {
                             this.CurrentSelection.ExpandTo();
@@ -576,9 +578,9 @@ namespace Snoop.Windows
         {
             Visual itemToFind = frameworkElement;
 
-            while (!(frameworkElement?.TemplatedParent is null))
+            while (frameworkElement?.TemplatedParent is not null)
             {
-                frameworkElement = frameworkElement?.TemplatedParent as FrameworkElement;
+                frameworkElement = frameworkElement.TemplatedParent as FrameworkElement;
                 itemToFind = frameworkElement;
             }
 
@@ -587,7 +589,7 @@ namespace Snoop.Windows
                 var parent = VisualTreeHelper.GetParent(itemToFind) as FrameworkElement;
 
                 // If the current item is of a certain type and is part of a template try to look further up the tree
-                if (!(parent?.TemplatedParent is null)
+                if (parent?.TemplatedParent is not null
                     && (parent is ContentPresenter
                         || parent is AccessText))
                 {
@@ -622,23 +624,23 @@ namespace Snoop.Windows
             {
                 var node = this.Root.FindNode(target);
 
-                if (node != null)
+                if (node is not null)
                 {
                     return node;
                 }
             }
 
-            // Not every visual element is in the logical tree, so try the visual tree
-            if (this.TreeService.TreeType == TreeType.Logical
+            // Not every visual element is in the logical or the automation tree, so try the visual tree
+            if ((this.TreeService.TreeType == TreeType.Logical || this.TreeService.TreeType == TreeType.Automation)
                 && target is DependencyObject dependencyObject)
             {
                 var parent = VisualTreeHelper.GetParent(dependencyObject);
 
-                while (parent != null)
+                while (parent is not null)
                 {
                     var node = this.Root.FindNode(parent);
 
-                    if (node != null)
+                    if (node is not null)
                     {
                         return node;
                     }
@@ -650,7 +652,7 @@ namespace Snoop.Windows
             var rootVisual = this.Root.MainVisual;
 
             if (target is Visual visual
-                && rootVisual != null)
+                && rootVisual is not null)
             {
                 // If target is a part of the SnoopUI, let's get out of here.
                 if (visual.IsDescendantOf(this))
@@ -662,7 +664,7 @@ namespace Snoop.Windows
                 if (visual.IsDescendantOf(rootVisual) == false)
                 {
                     var presentationSource = PresentationSource.FromVisual(visual);
-                    if (presentationSource == null)
+                    if (presentationSource is null)
                     {
                         return null; // Something went wrong. At least we will not crash with null ref here.
                     }
@@ -763,6 +765,7 @@ namespace Snoop.Windows
 
             this.OnPropertyChanged(nameof(this.Root));
         }
+
         #endregion
 
         #region Private Fields
