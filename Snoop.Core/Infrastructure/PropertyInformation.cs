@@ -13,7 +13,6 @@ namespace Snoop.Infrastructure
     using System.IO;
     using System.Linq;
     using System.Text;
-    using System.Text.RegularExpressions;
     using System.Windows;
     using System.Windows.Automation.Peers;
     using System.Windows.Controls;
@@ -26,6 +25,27 @@ namespace Snoop.Infrastructure
 
     public class PropertyInformation : DependencyObject, IComparable, INotifyPropertyChanged
     {
+        private static readonly Attribute[] getAllPropertiesAttributeFilter = { new PropertyFilterAttribute(PropertyFilterOptions.All) };
+
+        private readonly object? component;
+        private readonly bool isCopyable;
+        private bool breakOnChange;
+        private bool hasChangedRecently;
+        private ValueSource valueSource;
+
+        private string bindingError = string.Empty;
+        private readonly PropertyDescriptor? property;
+        private readonly string displayName;
+        private bool isLocallySet;
+
+        private bool isInvalidBinding;
+        private int index;
+
+        private bool isDatabound;
+
+        private bool isRunning;
+        private bool ignoreUpdate;
+
         /// <summary>
         /// Normal constructor used when constructing PropertyInformation objects for properties.
         /// </summary>
@@ -33,19 +53,19 @@ namespace Snoop.Infrastructure
         /// <param name="property">the property around which we are constructing this PropertyInformation object</param>
         /// <param name="propertyName">the property name for the property that we use in the binding in the case of a non-dependency property</param>
         /// <param name="propertyDisplayName">the display name for the property that goes in the name column</param>
-        public PropertyInformation(object target, PropertyDescriptor property, string propertyName, string propertyDisplayName)
+        public PropertyInformation(object target, PropertyDescriptor? property, string propertyName, string propertyDisplayName)
         {
             this.Target = target;
             this.property = property;
             this.displayName = propertyDisplayName;
 
-            if (property != null)
+            if (property is not null)
             {
                 // create a data binding between the actual property value on the target object
                 // and the Value dependency property on this PropertyInformation object
                 Binding binding;
                 var dp = this.DependencyProperty;
-                if (dp != null)
+                if (dp is not null)
                 {
                     binding = new Binding();
                     binding.Path = new PropertyPath("(0)", new object[] { dp });
@@ -121,7 +141,8 @@ namespace Snoop.Infrastructure
         /// <param name="target">the item in the collection</param>
         /// <param name="component">the collection</param>
         /// <param name="displayName">the display name that goes in the name column, i.e. this[x]</param>
-        public PropertyInformation(object target, object component, string displayName, object value, bool isCopyable = false)
+        /// <param name="value">the value</param>
+        public PropertyInformation(object target, object? component, string displayName, object? value, bool isCopyable = false)
             : this(target, null, displayName, displayName)
         {
             this.component = component;
@@ -137,9 +158,9 @@ namespace Snoop.Infrastructure
             BindingOperations.ClearAllBindings(this);
         }
 
-        public object Target { get; }
+        public object? Target { get; }
 
-        public object Value
+        public object? Value
         {
             get { return this.GetValue(ValueProperty); }
             set { this.SetValue(ValueProperty, value); }
@@ -175,7 +196,7 @@ namespace Snoop.Infrastructure
 
                 this.HasChangedRecently = (e.OldValue?.Equals(e.NewValue) ?? e.OldValue == e.NewValue) == false;
 
-                if (this.changeTimer == null)
+                if (this.changeTimer is null)
                 {
                     this.changeTimer = new DispatcherTimer
                     {
@@ -192,24 +213,24 @@ namespace Snoop.Infrastructure
             }
         }
 
-        private void HandleChangeExpiry(object sender, EventArgs e)
+        private void HandleChangeExpiry(object? sender, EventArgs e)
         {
-            this.changeTimer.Stop();
+            this.changeTimer?.Stop();
             this.changeTimer = null;
 
             this.HasChangedRecently = false;
         }
 
-        private DispatcherTimer changeTimer;
+        private DispatcherTimer? changeTimer;
 
         public string StringValue
         {
             get
             {
                 var value = this.Value;
-                if (value != null)
+                if (value is not null)
                 {
-                    return value.ToString();
+                    return value.ToString() ?? string.Empty;
                 }
 
                 return string.Empty;
@@ -218,7 +239,7 @@ namespace Snoop.Infrastructure
             set
             {
 #pragma warning disable WPF0036 // Avoid side effects in CLR accessors.
-                if (this.property == null)
+                if (this.property is null)
                 {
                     // if this is a PropertyInformation object constructed for an item in a collection
                     // then just return, since setting the value via a string doesn't make sense.
@@ -238,7 +259,7 @@ namespace Snoop.Infrastructure
             }
         }
 
-        public string ResourceKey
+        public string? ResourceKey
         {
             get
             {
@@ -249,7 +270,7 @@ namespace Snoop.Infrastructure
                     return null;
                 }
 
-                string resourceKey = null;
+                string? resourceKey = null;
 
                 if (this.Target is DependencyObject dependencyObject)
                 {
@@ -265,7 +286,7 @@ namespace Snoop.Infrastructure
                             ResourceKeyCache.Cache(resourceItem, resourceKey);
                         }
 
-                        Debug.Assert(resourceKey != null, "resourceKey != null");
+                        Debug.Assert(resourceKey is not null, "resourceKey is not null");
                     }
                 }
 
@@ -283,7 +304,7 @@ namespace Snoop.Infrastructure
                     return string.Empty;
                 }
 
-                var stringValue = value.ToString();
+                var stringValue = value.ToString() ?? string.Empty;
 
                 if (stringValue.Equals(value.GetType().ToString()))
                 {
@@ -300,7 +321,7 @@ namespace Snoop.Infrastructure
                     {
                         stringValue = string.Format("[{0}]", "DynamicResource");
                     }
-                    else if (this.property != null &&
+                    else if (this.property is not null &&
                              (this.property.PropertyType == typeof(Brush) || this.property.PropertyType == typeof(Style)))
                     {
                         stringValue = string.Format("[{0}]", value.GetType().Name);
@@ -312,7 +333,7 @@ namespace Snoop.Infrastructure
                 }
 
                 // Display #00FFFFFF as Transparent for easier readability
-                if (this.property != null &&
+                if (this.property is not null &&
                     this.property.PropertyType == typeof(Brush) &&
                     stringValue.Equals("#00FFFFFF"))
                 {
@@ -406,16 +427,16 @@ namespace Snoop.Infrastructure
             return sb.ToString();
         }
 
-        public Type ComponentType
+        public Type? ComponentType
         {
             get
             {
-                if (this.property == null)
+                if (this.property is null)
                 {
                     // if this is a PropertyInformation object constructed for an item in a collection
                     // then this.property will be null, but this.component will contain the collection.
                     // use this object to return the type of the collection for the ComponentType.
-                    return this.component.GetType();
+                    return this.component?.GetType();
                 }
                 else
                 {
@@ -424,14 +445,11 @@ namespace Snoop.Infrastructure
             }
         }
 
-        private readonly object component;
-        private readonly bool isCopyable;
-
         public Type PropertyType
         {
             get
             {
-                if (this.property == null)
+                if (this.property is null)
                 {
                     // if this is a PropertyInformation object constructed for an item in a collection
                     // just return typeof(object) here, since an item in a collection ... really isn't a property.
@@ -448,7 +466,7 @@ namespace Snoop.Infrastructure
         {
             get
             {
-                if (this.Value != null)
+                if (this.Value is not null)
                 {
                     return this.Value.GetType();
                 }
@@ -459,40 +477,36 @@ namespace Snoop.Infrastructure
             }
         }
 
+        public bool IsNullableValueType => Nullable.GetUnderlyingType(this.PropertyType) is not null;
+
         public string BindingError
         {
             get { return this.bindingError; }
         }
 
-        private string bindingError = string.Empty;
-
-        public PropertyDescriptor Property
+        public PropertyDescriptor? Property
         {
             get { return this.property; }
         }
-
-        private readonly PropertyDescriptor property;
 
         public string DisplayName
         {
             get { return this.displayName; }
         }
 
-        private readonly string displayName;
+        public bool IsCollectionEntry { get; private set; }
+
+        public object? CollectionEntryIndexOrKey { get; private set; }
 
         public bool IsInvalidBinding
         {
             get { return this.isInvalidBinding; }
         }
 
-        private bool isInvalidBinding;
-
         public bool IsLocallySet
         {
             get { return this.isLocallySet; }
         }
-
-        private bool isLocallySet;
 
         public bool IsValueChangedByUser { get; set; }
 
@@ -500,7 +514,7 @@ namespace Snoop.Infrastructure
         {
             get
             {
-                if (this.property == null)
+                if (this.property is null)
                 {
                     // if this is a PropertyInformation object constructed for an item in a collection
                     //return false;
@@ -517,8 +531,6 @@ namespace Snoop.Infrastructure
         {
             get { return this.isDatabound; }
         }
-
-        private bool isDatabound;
 
         public bool IsExpression
         {
@@ -545,20 +557,18 @@ namespace Snoop.Infrastructure
             }
         }
 
-        private int index;
-
         public bool IsOdd
         {
             get { return this.index % 2 == 1; }
         }
 
-        public BindingBase Binding
+        public BindingBase? Binding
         {
             get
             {
                 var dp = this.DependencyProperty;
-                var d = this.Target as DependencyObject;
-                if (dp != null && d != null)
+                if (dp is not null
+                    && this.Target is DependencyObject d)
                 {
                     return BindingOperations.GetBindingBase(d, dp);
                 }
@@ -567,13 +577,13 @@ namespace Snoop.Infrastructure
             }
         }
 
-        public BindingExpressionBase BindingExpression
+        public BindingExpressionBase? BindingExpression
         {
             get
             {
                 var dp = this.DependencyProperty;
-                var d = this.Target as DependencyObject;
-                if (dp != null && d != null)
+                if (dp is not null
+                    && this.Target is DependencyObject d)
                 {
                     return BindingOperations.GetBindingExpressionBase(d, dp);
                 }
@@ -582,7 +592,7 @@ namespace Snoop.Infrastructure
             }
         }
 
-        public PropertyFilter Filter
+        public PropertyFilter? Filter
         {
             get { return this.filter; }
 
@@ -594,7 +604,7 @@ namespace Snoop.Infrastructure
             }
         }
 
-        private PropertyFilter filter;
+        private PropertyFilter? filter;
 
         public bool BreakOnChange
         {
@@ -607,8 +617,6 @@ namespace Snoop.Infrastructure
             }
         }
 
-        private bool breakOnChange;
-
         public bool HasChangedRecently
         {
             get { return this.hasChangedRecently; }
@@ -620,27 +628,23 @@ namespace Snoop.Infrastructure
             }
         }
 
-        private bool hasChangedRecently;
-
         public ValueSource ValueSource
         {
             get { return this.valueSource; }
         }
 
-        private ValueSource valueSource;
-
         public bool IsVisible
         {
-            get { return this.filter.Show(this); }
+            get { return this.filter?.Show(this) != false; }
         }
 
         public void Clear()
         {
             var dp = this.DependencyProperty;
-            var d = this.Target as DependencyObject;
-            if (dp != null && d != null)
+            if (dp is not null
+                && this.Target is DependencyObject d)
             {
-                ((DependencyObject)this.Target).ClearValue(dp);
+                d.ClearValue(dp);
             }
         }
 
@@ -648,17 +652,17 @@ namespace Snoop.Infrastructure
         /// Returns the DependencyProperty identifier for the property that this PropertyInformation wraps.
         /// If the wrapped property is not a DependencyProperty, null is returned.
         /// </summary>
-        public DependencyProperty DependencyProperty
+        public DependencyProperty? DependencyProperty
         {
             get
             {
-                if (this.property != null)
+                if (this.property is not null)
                 {
                     // in order to be a DependencyProperty, the object must first be a regular property,
                     // and not an item in a collection.
 
                     var dpd = DependencyPropertyDescriptor.FromProperty(this.property);
-                    if (dpd != null)
+                    if (dpd is not null)
                     {
                         return dpd.DependencyProperty;
                     }
@@ -684,14 +688,14 @@ namespace Snoop.Infrastructure
             var d = this.Target as DependencyObject;
 
             if (SnoopModes.MultipleDispatcherMode
-                && d != null
+                && d is not null
                 && d.Dispatcher != this.Dispatcher)
             {
                 return;
             }
 
-            if (dp != null
-                && d != null)
+            if (dp is not null
+                && d is not null)
             {
                 //Debugger.Launch();
                 if (d.ReadLocalValue(dp) != DependencyProperty.UnsetValue)
@@ -700,7 +704,7 @@ namespace Snoop.Infrastructure
                 }
 
                 var expression = BindingOperations.GetBindingExpressionBase(d, dp);
-                if (expression != null)
+                if (expression is not null)
                 {
                     this.isDatabound = true;
 
@@ -738,7 +742,7 @@ namespace Snoop.Infrastructure
             var d = this.Target as DependencyObject;
 
             if (SnoopModes.MultipleDispatcherMode
-                && d != null
+                && d is not null
                 && d.Dispatcher != this.Dispatcher)
             {
                 return;
@@ -782,12 +786,12 @@ namespace Snoop.Infrastructure
                 }, DispatcherPriority.ApplicationIdle);
         }
 
-        public static List<PropertyInformation> GetProperties(object obj)
+        public static List<PropertyInformation> GetProperties(object? obj)
         {
             return GetProperties(obj, PertinentPropertyFilter.Filter);
         }
 
-        public static List<PropertyInformation> GetProperties(object obj, Func<object, PropertyDescriptor, bool> filter)
+        public static List<PropertyInformation> GetProperties(object? obj, Func<object, PropertyDescriptor, bool> filter)
         {
             var properties = new List<PropertyInformation>();
 
@@ -814,18 +818,46 @@ namespace Snoop.Infrastructure
 
             //delve path. also, issue 4919
             var extendedProps = GetExtendedProperties(obj);
-            if (extendedProps != null)
+            if (extendedProps is not null)
             {
                 properties.InsertRange(0, extendedProps);
             }
 
-            // if the object is a collection, add the items in the collection as properties
-            if (obj is ICollection collection)
+            if (obj is ResourceDictionary resourceDictionary) // if the object is a ResourceDictionary, add the items in the collection as properties
+            {
+                foreach (var key in resourceDictionary.Keys)
+                {
+                    resourceDictionary.TryGetValue(key, out var item, out var exception);
+
+                    if (item is not null
+                        || key is not null)
+                    {
+                        var value = exception?.ToString() ?? item;
+                        var info = new PropertyInformation(value ?? key!, resourceDictionary, "this[" + key + "]", value)
+                        {
+                            IsCollectionEntry = true,
+                            CollectionEntryIndexOrKey = key
+                        };
+
+                        properties.Add(info);
+                    }
+                }
+            }
+            else if (obj is ICollection collection) // if the object is a collection, add the items in the collection as properties
             {
                 var index = 0;
                 foreach (var item in collection)
                 {
-                    var info = new PropertyInformation(item, collection, "this[" + index + "]", item);
+                    if (item is null)
+                    {
+                        continue;
+                    }
+
+                    var info = new PropertyInformation(item, collection, "this[" + index + "]", item)
+                    {
+                        IsCollectionEntry = true,
+                        CollectionEntryIndexOrKey = index
+                    };
 
                     index++;
                     properties.Add(info);
@@ -839,7 +871,7 @@ namespace Snoop.Infrastructure
         /// 4919 + Delve
         /// </summary>
         /// <returns></returns>
-        private static IList<PropertyInformation> GetExtendedProperties(object obj)
+        private static IList<PropertyInformation>? GetExtendedProperties(object? obj)
         {
             if (obj is null)
             {
@@ -849,7 +881,7 @@ namespace Snoop.Infrastructure
             if (ResourceKeyCache.Contains(obj))
             {
                 var key = ResourceKeyCache.GetKey(obj);
-                var prop = new PropertyInformation(key, null, "x:Key", key, isCopyable: true);
+                var prop = new PropertyInformation(key!, null, "x:Key", key!, isCopyable: true);
                 return new List<PropertyInformation>
                 {
                     prop
@@ -859,39 +891,44 @@ namespace Snoop.Infrastructure
             if (obj is string
                 || obj.GetType().IsValueType)
             {
-                return new List<PropertyInformation> { new PropertyInformation(obj, null, "ToString", obj, isCopyable: true) };
+                return new List<PropertyInformation> { new(obj, null, "ToString", obj, isCopyable: true) };
             }
 
             if (obj is AutomationPeer automationPeer)
             {
                 var automationProperties = new List<PropertyInformation>
                     {
-                        new PropertyInformation(obj, null, "ClassName", automationPeer.GetClassName(), isCopyable: true),
-                        new PropertyInformation(obj, null, "Name", automationPeer.GetName(), isCopyable: true),
-                        new PropertyInformation(obj, null, "AcceleratorKey", automationPeer.GetAcceleratorKey(), isCopyable: true),
-                        new PropertyInformation(obj, null, "AccessKey", automationPeer.GetAccessKey(), isCopyable: true),
-                        new PropertyInformation(obj, null, "AutomationControlType", automationPeer.GetAutomationControlType(), isCopyable: true),
-                        new PropertyInformation(obj, null, "AutomationId", automationPeer.GetAutomationId(), isCopyable: true),
-                        new PropertyInformation(obj, null, "BoundingRectangle", automationPeer.GetBoundingRectangle(), isCopyable: true),
-                        new PropertyInformation(obj, null, "ClickablePoint", automationPeer.GetClickablePoint(), isCopyable: true),
-                        new PropertyInformation(obj, null, "HelpText", automationPeer.GetHelpText(), isCopyable: true),
-                        new PropertyInformation(obj, null, "ItemStatus", automationPeer.GetItemStatus(), isCopyable: true),
-                        new PropertyInformation(obj, null, "ItemType", automationPeer.GetItemType(), isCopyable: true),
-                        new PropertyInformation(obj, null, "LabeledBy", automationPeer.GetLabeledBy(), isCopyable: true),
+                        new(obj, null, "ClassName", automationPeer.GetClassName(), isCopyable: true),
+                        new(obj, null, "Name", automationPeer.GetName(), isCopyable: true),
+                        new(obj, null, "AcceleratorKey", automationPeer.GetAcceleratorKey(), isCopyable: true),
+                        new(obj, null, "AccessKey", automationPeer.GetAccessKey(), isCopyable: true),
+                        new(obj, null, "AutomationControlType", automationPeer.GetAutomationControlType(), isCopyable: true),
+                        new(obj, null, "AutomationId", automationPeer.GetAutomationId(), isCopyable: true),
+                        new(obj, null, "BoundingRectangle", automationPeer.GetBoundingRectangle(), isCopyable: true),
+                        new(obj, null, "ClickablePoint", automationPeer.GetClickablePoint(), isCopyable: true),
+                        new(obj, null, "HelpText", automationPeer.GetHelpText(), isCopyable: true),
+                        new(obj, null, "ItemStatus", automationPeer.GetItemStatus(), isCopyable: true),
+                        new(obj, null, "ItemType", automationPeer.GetItemType(), isCopyable: true),
+                        new(obj, null, "LabeledBy", automationPeer.GetLabeledBy(), isCopyable: true),
                         #if !NET40
-                        new PropertyInformation(obj, null, "LiveSetting", automationPeer.GetLiveSetting(), isCopyable: true),
+                        new(obj, null, "LiveSetting", automationPeer.GetLiveSetting(), isCopyable: true),
                         #endif
-                        new PropertyInformation(obj, null, "LocalizedControlType", automationPeer.GetLocalizedControlType(), isCopyable: true),
-                        new PropertyInformation(obj, null, "Orientation", automationPeer.GetOrientation(), isCopyable: true),
+                        new(obj, null, "LocalizedControlType", automationPeer.GetLocalizedControlType(), isCopyable: true),
+                        new(obj, null, "Orientation", automationPeer.GetOrientation(), isCopyable: true),
                     };
 
                 var supportedPatterns = new List<string>();
 
-                foreach (PatternInterface patternInterface in Enum.GetValues(typeof(PatternInterface)))
+                foreach (PatternInterface? patternInterface in Enum.GetValues(typeof(PatternInterface)))
                 {
-                    if (automationPeer.GetPattern(patternInterface) is not null)
+                    if (patternInterface is null)
                     {
-                        supportedPatterns.Add(patternInterface.ToString());
+                        continue;
+                    }
+
+                    if (automationPeer.GetPattern(patternInterface.Value) is not null)
+                    {
+                        supportedPatterns.Add(patternInterface.Value.ToString());
                     }
                 }
 
@@ -907,15 +944,17 @@ namespace Snoop.Infrastructure
         {
             var propertiesToReturn = new List<PropertyDescriptor>();
 
+            object? currentObj = obj;
+
             // keep looping until you don't have an AmbiguousMatchException exception
             // and you normally won't have an exception, so the loop will typically execute only once.
             var noException = false;
-            while (!noException && obj != null)
+            while (!noException && currentObj is not null)
             {
                 try
                 {
                     // try to get the properties using the GetProperties method that takes an instance
-                    var properties = TypeDescriptor.GetProperties(obj, attributes);
+                    var properties = TypeDescriptor.GetProperties(currentObj, attributes);
                     noException = true;
 
                     MergeProperties(properties, propertiesToReturn);
@@ -934,22 +973,33 @@ namespace Snoop.Infrastructure
                     //     }
                     // }
 
-                    var t = obj.GetType();
+                    var t = currentObj.GetType();
                     var properties = TypeDescriptor.GetProperties(t, attributes);
 
                     MergeProperties(properties, propertiesToReturn);
 
                     var nextBaseTypeWithDefaultConstructor = GetNextTypeWithDefaultConstructor(t);
-                    obj = Activator.CreateInstance(nextBaseTypeWithDefaultConstructor);
+
+                    if (nextBaseTypeWithDefaultConstructor is null)
+                    {
+                        break;
+                    }
+
+                    currentObj = Activator.CreateInstance(nextBaseTypeWithDefaultConstructor)!;
                 }
             }
 
             return propertiesToReturn;
         }
 
-        public static bool HasDefaultConstructor(Type type)
+        public static bool HasDefaultConstructor(Type? type)
         {
-            var constructors = type.GetConstructors();
+            var constructors = type?.GetConstructors();
+
+            if (constructors is null)
+            {
+                return false;
+            }
 
             foreach (var constructor in constructors)
             {
@@ -962,13 +1012,13 @@ namespace Snoop.Infrastructure
             return false;
         }
 
-        public static Type GetNextTypeWithDefaultConstructor(Type type)
+        public static Type? GetNextTypeWithDefaultConstructor(Type type)
         {
             var t = type.BaseType;
 
             while (!HasDefaultConstructor(t))
             {
-                t = t.BaseType;
+                t = t?.BaseType;
             }
 
             return t;
@@ -979,7 +1029,7 @@ namespace Snoop.Infrastructure
             foreach (var newProperty in newProperties)
             {
                 var newPropertyDescriptor = newProperty as PropertyDescriptor;
-                if (newPropertyDescriptor == null)
+                if (newPropertyDescriptor is null)
                 {
                     continue;
                 }
@@ -991,42 +1041,41 @@ namespace Snoop.Infrastructure
             }
         }
 
-        private bool isRunning;
-        private bool ignoreUpdate;
-        private static readonly Attribute[] getAllPropertiesAttributeFilter = { new PropertyFilterAttribute(PropertyFilterOptions.All) };
-
-        public bool IsCollection()
+        private int CollectionIndex()
         {
-            var pattern = "^this\\[\\d+\\]$";
-            return Regex.IsMatch(this.DisplayName, pattern);
-        }
-
-        public int CollectionIndex()
-        {
-            if (this.IsCollection())
+            if (this.IsCollectionEntry
+                && this.CollectionEntryIndexOrKey is int collectionEntryIndex)
             {
-                return int.Parse(this.DisplayName.Substring(5, this.DisplayName.Length - 6));
+                return collectionEntryIndex;
             }
 
             return -1;
         }
 
         #region IComparable Members
-        public int CompareTo(object obj)
+
+        public int CompareTo(object? obj)
         {
             var thisIndex = this.CollectionIndex();
-            var objIndex = ((PropertyInformation)obj).CollectionIndex();
-            if (thisIndex >= 0 && objIndex >= 0)
+            var other = obj as PropertyInformation;
+
+            if (other is not null)
             {
-                return thisIndex.CompareTo(objIndex);
+                var objIndex = other.CollectionIndex();
+                if (thisIndex >= 0
+                    && objIndex >= 0)
+                {
+                    return thisIndex.CompareTo(objIndex);
+                }
             }
 
-            return this.DisplayName.CompareTo(((PropertyInformation)obj).DisplayName);
+            return string.Compare(this.DisplayName, other?.DisplayName, StringComparison.Ordinal);
         }
+
         #endregion
 
         #region INotifyPropertyChanged Members
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         [NotifyPropertyChangedInvocator]
         protected void OnPropertyChanged(string propertyName)
@@ -1034,6 +1083,5 @@ namespace Snoop.Infrastructure
             this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
         #endregion
-
     }
 }

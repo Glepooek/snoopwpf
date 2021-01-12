@@ -1,9 +1,13 @@
+#pragma warning disable IDE0051 // Remove unused private members
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
+using JetBrains.Annotations;
 using Nuke.Common;
+using Nuke.Common.CI;
 using Nuke.Common.Execution;
 using Nuke.Common.Git;
 using Nuke.Common.IO;
@@ -78,6 +82,8 @@ class Build : NukeBuild
     [Parameter]
     readonly AbsolutePath ArtifactsDirectory = RootDirectory / "artifacts";
 
+    AbsolutePath OutputDirectory => RootDirectory / "output";
+
     AbsolutePath ChocolateyDirectory => RootDirectory / "chocolatey";
 
     string CandleExecutable => ToolPathResolver.GetPackageExecutable("wix", "candle.exe");
@@ -119,6 +125,7 @@ class Build : NukeBuild
                 .SetVerbosity(DotNetVerbosity.Minimal));
         });
 
+    [PublicAPI]
     Target CompileTestHarnesses => _ => _
         .Executes(() =>
         {
@@ -139,11 +146,29 @@ class Build : NukeBuild
                 .SetVerbosity(DotNetVerbosity.Minimal));
         });
 
+    AbsolutePath TestResultDirectory => OutputDirectory / "test-results";
+    
+    Target Test => _ => _
+        .After(Compile)
+        .Before(Pack)
+        .Produces(TestResultDirectory / "*.trx")
+        .Produces(TestResultDirectory / "*.xml")
+        .Executes(() =>
+        {
+            DotNetTest(s => s
+                .SetProjectFile(RootDirectory / "Snoop.Core.Tests" / "Snoop.Core.Tests.csproj")
+                .SetConfiguration(Configuration)
+                .SetVerbosity(DotNetVerbosity.Normal)
+                .SetLogger("trx")
+                .SetNoBuild(true)
+                .SetResultsDirectory(TestResultDirectory));
+        });
+
     Target Pack => _ => _
         .DependsOn(CleanOutput)
         .DependsOn(Compile)
         .Executes(() => {
-            // Generate ingore files to prevent chocolatey from generating shims for them
+            // Generate ignore files to prevent chocolatey from generating shims for them
             foreach (var launcher in CurrentBuildOutputDirectory.GlobFiles($"{ProjectName}.InjectorLauncher.*.exe"))
             {
                 using var _ = File.Create(launcher + ".ignore");
@@ -194,6 +219,7 @@ class Build : NukeBuild
             CheckSumFiles.Add(outputFile);
         });
 
+    [PublicAPI]
     Target CheckSums => _ => _
         .TriggeredBy(Pack, Setup)
         .Executes(() => {
@@ -209,5 +235,5 @@ class Build : NukeBuild
         });
 
     Target CI => _ => _
-        .DependsOn(Compile, Pack, Setup);
+        .DependsOn(Compile, Test, Pack, Setup);
 }

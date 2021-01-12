@@ -14,20 +14,44 @@ namespace Snoop.Infrastructure
 
     public delegate void EventTrackerHandler(TrackedEvent newEvent);
 
+    [DebuggerDisplay("{" + nameof(Id) + "}")]
+    [Serializable]
+    public class EventTrackerSettingsItem
+    {
+        // just for serialization
+        private EventTrackerSettingsItem()
+        {
+            this.Id = string.Empty;
+        }
+
+        public EventTrackerSettingsItem(string id)
+        {
+            this.Id = id;
+        }
+
+        public string Id { get; set; }
+
+        public bool IsEnabled { get; set; }
+    }
+
     /// <summary>
     /// Random class that tries to determine what element handled a specific event.
     /// Doesn't work too well in the end, because the static ClassHandler doesn't get called
     /// in a consistent order.
     /// </summary>
+    [DebuggerDisplay("{" + nameof(Id) + "}")]
     public class EventTracker : INotifyPropertyChanged, IComparable
     {
         public EventTracker(Type targetType, RoutedEvent routedEvent)
         {
             this.targetType = targetType;
             this.RoutedEvent = routedEvent;
+            this.Id = this.RoutedEvent.OwnerType.FullName + ";" + this.RoutedEvent.Name;
         }
 
-        public event EventTrackerHandler EventHandled;
+        public event EventTrackerHandler? EventHandled;
+
+        public string Id { get; }
 
         public bool IsEnabled
         {
@@ -38,7 +62,9 @@ namespace Snoop.Infrastructure
                 if (this.isEnabled != value)
                 {
                     this.isEnabled = value;
-                    if (this.isEnabled && !this.everEnabled)
+
+                    if (this.isEnabled
+                        && this.everEnabled == false)
                     {
                         this.everEnabled = true;
                         EventManager.RegisterClassHandler(this.targetType, this.RoutedEvent, new RoutedEventHandler(this.HandleEvent), true);
@@ -71,27 +97,27 @@ namespace Snoop.Infrastructure
             if (this.isEnabled)
             {
                 var entry = new EventEntry(sender, e.Handled);
-                if (this.currentEvent != null && this.currentEvent.EventArgs == e)
+                if (this.currentEvent is not null && this.currentEvent.EventArgs == e)
                 {
                     this.currentEvent.AddEventEntry(entry);
                 }
                 else
                 {
                     this.currentEvent = new TrackedEvent(e, entry);
-                    this.EventHandled(this.currentEvent);
+                    this.EventHandled?.Invoke(this.currentEvent);
                 }
             }
         }
 
-        private TrackedEvent currentEvent;
+        private TrackedEvent? currentEvent;
         private bool everEnabled;
         private readonly Type targetType;
 
         #region IComparable Members
-        public int CompareTo(object obj)
+        public int CompareTo(object? obj)
         {
             var otherTracker = obj as EventTracker;
-            if (otherTracker == null)
+            if (otherTracker is null)
             {
                 return 1;
             }
@@ -106,7 +132,7 @@ namespace Snoop.Infrastructure
         #endregion
 
         #region INotifyPropertyChanged Members
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         [NotifyPropertyChangedInvocator]
         protected void OnPropertyChanged(string propertyName)
@@ -145,7 +171,7 @@ namespace Snoop.Infrastructure
 
         private bool handled;
 
-        public object HandledBy
+        public object? HandledBy
         {
             get { return this.handledBy; }
 
@@ -156,9 +182,9 @@ namespace Snoop.Infrastructure
             }
         }
 
-        private object handledBy;
+        private object? handledBy;
 
-        public ObservableCollection<EventEntry> Stack { get; } = new ObservableCollection<EventEntry>();
+        public ObservableCollection<EventEntry> Stack { get; } = new();
 
         public void AddEventEntry(EventEntry eventEntry)
         {
@@ -171,7 +197,7 @@ namespace Snoop.Infrastructure
         }
 
         #region INotifyPropertyChanged Members
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         [NotifyPropertyChangedInvocator]
         protected void OnPropertyChanged(string propertyName)

@@ -11,7 +11,6 @@ namespace Snoop
     using System.Diagnostics;
     using System.Linq;
     using System.Threading;
-    using System.Threading.Tasks;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Data;
@@ -24,14 +23,15 @@ namespace Snoop
 
     public partial class AppChooser
     {
-        public static readonly RoutedCommand InspectCommand = new RoutedCommand(nameof(InspectCommand), typeof(AppChooser));
-        public static readonly RoutedCommand RefreshCommand = new RoutedCommand(nameof(RefreshCommand), typeof(AppChooser));
-        public static readonly RoutedCommand MagnifyCommand = new RoutedCommand(nameof(MagnifyCommand), typeof(AppChooser));
-        public static readonly RoutedCommand SettingsCommand = new RoutedCommand(nameof(SettingsCommand), typeof(AppChooser));
-        public static readonly RoutedCommand MinimizeCommand = new RoutedCommand(nameof(MinimizeCommand), typeof(AppChooser));
+        public static readonly RoutedCommand InspectCommand = new(nameof(InspectCommand), typeof(AppChooser));
+        public static readonly RoutedCommand RefreshCommand = new(nameof(RefreshCommand), typeof(AppChooser));
+        public static readonly RoutedCommand MagnifyCommand = new(nameof(MagnifyCommand), typeof(AppChooser));
+        public static readonly RoutedCommand SettingsCommand = new(nameof(SettingsCommand), typeof(AppChooser));
+        public static readonly RoutedCommand MinimizeCommand = new(nameof(MinimizeCommand), typeof(AppChooser));
 
-        private readonly ObservableCollection<WindowInfo> windowInfos = new ObservableCollection<WindowInfo>();
-        private LowLevelKeyboardHook keyboardHook;
+        private readonly ObservableCollection<WindowInfo> windowInfos = new();
+
+        private LowLevelKeyboardHook? keyboardHook;
 
         static AppChooser()
         {
@@ -41,7 +41,7 @@ namespace Snoop
         public AppChooser()
         {
             this.WindowInfos = CollectionViewSource.GetDefaultView(this.windowInfos);
-            this.WindowInfos?.SortDescriptions.Add(new SortDescription(nameof(WindowInfo.ProcessId), ListSortDirection.Ascending));
+            this.WindowInfos.SortDescriptions.Add(new SortDescription(nameof(WindowInfo.ProcessId), ListSortDirection.Ascending));
             this.SortColumn = 1;
 
             this.InitializeComponent();
@@ -73,7 +73,8 @@ namespace Snoop
                         foreach (var process in processes)
                         {
                             var windows = NativeMethods.GetRootWindowsOfProcess(process.Id);
-                            var windowInfoCollection = windows.Select(h => new WindowInfo(h, process));
+                            var windowInfoCollection = windows.Select(h => WindowInfo.GetWindowInfo(h, process));
+
                             foreach (var windowInfo in windowInfoCollection)
                             {
                                 if (windowInfo.IsValidProcess && !this.IsAlreadyInList(process))
@@ -99,7 +100,7 @@ namespace Snoop
         {
             base.OnSourceInitialized(e);
 
-            this.keyboardHook = new LowLevelKeyboardHook(PresentationSource.FromVisual(this));
+            this.keyboardHook = new LowLevelKeyboardHook(PresentationSource.FromVisual(this)!);
             this.keyboardHook.LowLevelKeyUp += KeyboardHook_LowLevelKeyUp;
             this.keyboardHook.Start();
 
@@ -123,7 +124,7 @@ namespace Snoop
 
             if (foregroundWindow != IntPtr.Zero)
             {
-                var windowInfo = new WindowInfo(foregroundWindow);
+                var windowInfo = WindowInfo.GetWindowInfo(foregroundWindow);
 
                 if (windowInfo.IsValidProcess)
                 {
@@ -144,7 +145,7 @@ namespace Snoop
 
         protected override void OnClosed(EventArgs e)
         {
-            this.keyboardHook.Stop();
+            this.keyboardHook?.Stop();
 
             base.OnClosed(e);
         }
@@ -153,7 +154,8 @@ namespace Snoop
         {
             foreach (var window in this.windowInfos)
             {
-                if (window.OwningProcessInfo.Process.Id == process.Id)
+                if (window.OwningProcessInfo is not null
+                    && window.OwningProcessInfo.Process.Id == process.Id)
                 {
                     return true;
                 }
@@ -164,7 +166,7 @@ namespace Snoop
 
         private void HandleCanInspectOrMagnifyCommand(object sender, CanExecuteRoutedEventArgs e)
         {
-            if (this.WindowInfos.CurrentItem != null)
+            if (this.WindowInfos.CurrentItem is not null)
             {
                 e.CanExecute = true;
             }
@@ -175,7 +177,7 @@ namespace Snoop
         private void HandleInspectCommand(object sender, ExecutedRoutedEventArgs e)
         {
             var window = (WindowInfo)this.WindowInfos.CurrentItem;
-            var result = window?.OwningProcessInfo.Snoop(window.HWnd);
+            var result = window?.OwningProcessInfo?.Snoop(window.HWnd);
 
             if (result?.Success == false)
             {
@@ -317,8 +319,8 @@ namespace Snoop
 
         public bool Success { get; }
 
-        public Exception AttachException { get; }
+        public Exception? AttachException { get; }
 
-        public string WindowName { get; }
+        public string? WindowName { get; }
     }
 }

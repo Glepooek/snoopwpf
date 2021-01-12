@@ -1,10 +1,30 @@
 ﻿# Changelog for Snoop
 
+## 3.1.0
+
+- ### Bug fixes
+
+  - Path for entries from `ResourceDictionary` is now displayed correctly when delving 
+  - Detaching Snoop now properly pops the menu mode. Prior to this certain keyboard keys, like DEL or LEFT or RIGHT etc., stopped working.
+  - Detaching Snoop now properly detaches it's exception handler
+  - Fixed a performance regression in the window finder when using mouse cursor drop
+  - Fixed an exception when application contains invalid resource definitons
+
+- ### Improvements
+
+  - Maximum displayed events in events viewer are now persisted in settings
+  - Added menu items to close the current snoop window, open the folder containing the settings for the currently running application and reset the current settings
+  - Added support for `ThreeState` bool values in the properties grid
+  - [#38](../../issues/38) - Export tree (thanks @amake for the basic idea and starting point)
+  - [#103](../../issues/103) - Feature Request: Persist Tracked Events Settings
+
 ## 3.0.1
 
 - ### Bug fixes
 
   - Fixing window finder cursor display when DPI != 100%
+  - [#203](../../issues/203) - The calling thread cannot access this object because a different thread owns it.
+  - [#207](../../issues/207) - Exception when trying to snoop application with invalid resource definitions inside ResourceDictionary
   
 ## 3.0.0
 

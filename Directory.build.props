@@ -11,7 +11,9 @@
   <PropertyGroup>
     <LangVersion>preview</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <NoWarn>$(NoWarn);NU1503</NoWarn>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);NU1503;NETSDK1138;MSB3277</NoWarn>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
   <PropertyGroup>

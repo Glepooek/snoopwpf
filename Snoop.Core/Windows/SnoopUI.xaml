@@ -22,7 +22,6 @@ All other rights reserved.
     xmlns:behaviorsTab="clr-namespace:Snoop.Views.BehaviorsTab"
     xmlns:methodsTab="clr-namespace:Snoop.Views.MethodsTab"
     xmlns:debugListenerTab="clr-namespace:Snoop.Views.DebugListenerTab"
-    xmlns:markup="clr-namespace:Snoop.Extensions.Markup"
     mc:Ignorable="d"
 	Title="Snoop"
     MinWidth="480"
@@ -123,15 +122,29 @@ All other rights reserved.
             <ComboBox Style="{x:Null}"
                       x:Name="TreeTypeComboBox"
                       Padding="4,2"
-                      ItemsSource="{Binding Source={markup:EnumBindingSource {x:Type tree:TreeType}}}"
+                      ItemsSource="{Binding Source={snoop:EnumBindingSource {x:Type tree:TreeType}}}"
                       SelectedItem="{Binding CurrentTreeType, Mode=TwoWay}" />
 			<Menu Style="{x:Null}">
+				<MenuItem Style="{x:Null}"
+                          Header="File">
+                    <MenuItem Style="{x:Null}" Header="Close window" Command="{x:Static ApplicationCommands.Close}" />
+                </MenuItem>
+                <MenuItem Style="{x:Null}"
+                          Header="Settings">
+                    <MenuItem Style="{x:Null}" Header="Open settings folder" Click="HandleOpenSettingsFolder_OnClick" />
+                    <Separator />
+                    <MenuItem Style="{x:Null}" Header="Reset settings and close window" Click="HandleResetSettings_OnClick" />
+                </MenuItem>
                 <MenuItem Style="{x:Null}"
                           Header="_Tracking options">
                     <MenuItem Style="{x:Null}"
-                              Header="Handle _CTRL" IsCheckable="True" IsChecked="{Binding IsHandlingCTRL}" />
+                              Header="Handle _CTRL"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsHandlingCTRL}" />
                     <MenuItem Style="{x:Null}"
-                              Header="Handle CTRL + _SHIFT" IsCheckable="True" IsChecked="{Binding IsHandlingCTRL_SHIFT}" />
+                              Header="Handle CTRL + _SHIFT"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsHandlingCTRL_SHIFT}" />
                 </MenuItem>
 			</Menu>
         </StackPanel>
@@ -218,6 +231,53 @@ All other rights reserved.
 					<Setter Property="Background" Value="{Binding TreeBackgroundBrush}"/>
 					<Setter Property="ToolTip" Value="{Binding VisualBrush}"/>
 
+                    <Setter Property="ContextMenu">
+						<Setter.Value>
+							<ContextMenu Style="{x:Null}">
+								<MenuItem Header="Export"
+                                          Style="{x:Null}">
+                                    <MenuItem Header="Tree (with filter)"
+                                              Style="{x:Null}"
+                                              Command="{x:Static windows:SnoopUI.ExportTreeWithFilterCommand}">
+										<MenuItem.CommandParameter>
+											<infrastructure:ExportOptions TreeItem="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          Recurse="True"
+                                                                          UseFilter="True" />
+                                        </MenuItem.CommandParameter>
+                                    </MenuItem>
+                                    <MenuItem Header="Tree (without filter)"
+                                              Style="{x:Null}"
+                                              Command="{x:Static windows:SnoopUI.ExportTreeWithFilterCommand}">
+                                        <MenuItem.CommandParameter>
+                                            <infrastructure:ExportOptions TreeItem="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          Recurse="True" />
+                                        </MenuItem.CommandParameter>
+                                    </MenuItem>
+
+                                    <Separator Style="{x:Null}" />
+
+                                    <MenuItem Header="Element (with filter)"
+                                              Style="{x:Null}"
+                                              Command="{x:Static windows:SnoopUI.ExportTreeWithFilterCommand}">
+                                        <MenuItem.CommandParameter>
+                                            <infrastructure:ExportOptions TreeItem="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          Recurse="False"
+                                                                          UseFilter="True" />
+                                        </MenuItem.CommandParameter>
+                                    </MenuItem>
+                                    <MenuItem Header="Element (without filter)"
+                                              Style="{x:Null}"
+                                              Command="{x:Static windows:SnoopUI.ExportTreeWithFilterCommand}">
+                                        <MenuItem.CommandParameter>
+                                            <infrastructure:ExportOptions TreeItem="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          Recurse="False" />
+                                        </MenuItem.CommandParameter>
+                                    </MenuItem>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                    
 					<Style.Resources>
 						<Style TargetType="{x:Type ToolTip}">
 							<Setter Property="Template">
@@ -298,7 +358,8 @@ All other rights reserved.
 						</TextBlock.ToolTip>
 					</TextBlock>
 				</TabItem.Header>
-				<controls:PropertyInspector x:Name="DataContextPropertyGrid" RootTarget="{Binding CurrentSelection.Target.DataContext}"/>
+
+				<controls:PropertyInspector x:Name="DataContextPropertyGrid" RootTarget="{Binding CurrentSelection.Target, Converter={x:Static converters:DataContextExtractorConverter.Instance}}"/>
 			</TabItem>
 
 			<TabItem Style="{x:Null}">
@@ -376,10 +437,8 @@ All other rights reserved.
 					</TextBlock>
 				</TabItem.Header>
 
-				<methodsTab:MethodsControl
-					RootTarget="{Binding CurrentSelection.Target}"
-					IsSelected="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type TabItem}}}"
-				/>
+				<methodsTab:MethodsControl RootTarget="{Binding CurrentSelection.Target}"
+                                           IsSelected="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type TabItem}}}" />
 			</TabItem>
 
 			<TabItem Style="{x:Null}"
@@ -392,8 +451,7 @@ All other rights reserved.
 								<TextBlock
 									Style="{x:Null}"
 									Text="A view which lets you script the Snooped app using PowerShell."
-									TextWrapping="Wrap"
-								/>
+									TextWrapping="Wrap" />
 							</StackPanel>
 						</TextBlock.ToolTip>
 					</TextBlock>
@@ -411,14 +469,13 @@ All other rights reserved.
 								<TextBlock
 									Style="{x:Null}"
 									Text="Shows and filters debug output from the application being Snooped."
-									TextWrapping="Wrap"
-								/>
+									TextWrapping="Wrap" />
 							</StackPanel>
 						</TextBlock.ToolTip>
 					</TextBlock>
 				</TabItem.Header>
 
-				<debugListenerTab:DebugListenerControl/>
+				<debugListenerTab:DebugListenerControl />
 			</TabItem>
 		</TabControl>
 
@@ -430,8 +487,7 @@ All other rights reserved.
 			Height="4"
 			HorizontalAlignment="Stretch"
 			VerticalAlignment="Top"
-			Margin="2,0,2,0"
-		/>
+			Margin="2,0,2,0" />
 
 		<!-- Previewer -->
 		<controls:Previewer
@@ -439,8 +495,7 @@ All other rights reserved.
 			Grid.Row="2"
 			Grid.Column="1"
 			Margin="2,4,2,0"
-			Target="{Binding CurrentSelection.Target}"
-		/>
+			Target="{Binding CurrentSelection.Target}" />
 
 		<!-- StatusBar -->
 		<StatusBar Style="{x:Null}" Grid.Row="3" Grid.ColumnSpan="2" Grid.Column="0">
@@ -448,11 +503,9 @@ All other rights reserved.
 				<StackPanel Style="{x:Null}" Orientation="Horizontal">
 					<TextBlock Style="{x:Null}" Text="Keyboard.FocusedElement:"/>
 					<TextBlock Style="{x:Null}" Margin="3,0,0,0">
-						<windows:NoFocusHyperlink
-							Focusable="False"
-							Command="{x:Static windows:SnoopUI.SelectFocusCommand}"
-							CommandParameter="{Binding CurrentFocus}"
-						>
+						<windows:NoFocusHyperlink Focusable="False"
+                                                  Command="{x:Static windows:SnoopUI.SelectFocusCommand}"
+							                      CommandParameter="{Binding CurrentFocus}" >
 							<TextBlock Style="{x:Null}" Text="{Binding CurrentFocus, Converter={x:Static converters:ObjectToStringConverter.Instance}}"/>
 						</windows:NoFocusHyperlink>
 					</TextBlock>

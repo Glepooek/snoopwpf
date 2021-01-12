@@ -8,16 +8,15 @@ namespace Snoop.Data.Tree
     using System.ComponentModel;
     using System.Windows;
     using System.Windows.Data;
-    using System.Windows.Markup;
 
     public class ResourceDictionaryTreeItem : TreeItem
     {
-        private static readonly SortDescription dictionarySortDescription = new SortDescription(nameof(SortOrder), ListSortDirection.Ascending);
-        private static readonly SortDescription displayNameSortDescription = new SortDescription(nameof(DisplayName), ListSortDirection.Ascending);
+        private static readonly SortDescription dictionarySortDescription = new(nameof(SortOrder), ListSortDirection.Ascending);
+        private static readonly SortDescription displayNameSortDescription = new(nameof(DisplayName), ListSortDirection.Ascending);
 
         private readonly ResourceDictionary dictionary;
 
-        public ResourceDictionaryTreeItem(ResourceDictionary dictionary, TreeItem parent, TreeService treeService)
+        public ResourceDictionaryTreeItem(ResourceDictionary dictionary, TreeItem? parent, TreeService treeService)
             : base(dictionary, parent, treeService)
         {
             this.dictionary = dictionary;
@@ -27,7 +26,7 @@ namespace Snoop.Data.Tree
             childrenView.SortDescriptions.Add(displayNameSortDescription);
         }
 
-        public override TreeItem FindNode(object target)
+        public override TreeItem? FindNode(object? target)
         {
             return null;
         }
@@ -41,7 +40,7 @@ namespace Snoop.Data.Tree
                 return base.GetName();
             }
 
-            return source;
+            return source!;
         }
 
         protected override void ReloadCore()
@@ -60,29 +59,16 @@ namespace Snoop.Data.Tree
                 ++order;
             }
 
-            foreach (var key in this.dictionary.Keys)
+            var resourceDictionary = this.dictionary;
+            foreach (var key in resourceDictionary.Keys)
             {
-                object target;
-                try
-                {
-                    target = this.dictionary[key];
-                }
-                catch (XamlParseException)
-                {
-                    // sometimes you can get a XamlParseException ... because the xaml you are Snoop(ing) is bad.
-                    // e.g. I got this once when I was Snoop(ing) some xaml that was referring to an image resource that was no longer there.
-                    // in this case, just continue to the next resource in the dictionary.
-                    continue;
-                }
+                resourceDictionary.TryGetValue(key, out var item, out var exception);
 
-                if (target == null)
+                if (item is not null
+                    || key is not null)
                 {
-                    // you only get a XamlParseException once. the next time through target just comes back null.
-                    // in this case, just continue to the next resource in the dictionary (as before).
-                    continue;
+                    this.Children.Add(new ResourceItem(item ?? exception ?? key!, key!, this, this.TreeService, exception is not null));
                 }
-
-                this.Children.Add(new ResourceItem(target, key, this, this.TreeService));
             }
         }
 
@@ -101,20 +87,32 @@ namespace Snoop.Data.Tree
 
     public class ResourceItem : TreeItem
     {
-        private readonly object key;
+        private readonly object? key;
+        private readonly bool hasError;
 
-        public ResourceItem(object target, object key, TreeItem parent, TreeService treeService)
+        public ResourceItem(object target, object key, TreeItem parent, TreeService treeService, bool hasError)
             : base(target, parent, treeService)
         {
             this.key = key;
+            this.hasError = hasError;
             this.SortOrder = int.MaxValue;
         }
 
-        public override string DisplayName => this.key.ToString();
+        public override string DisplayName => this.key?.ToString() ?? "{x:Null}";
 
         public override string ToString()
         {
-            return $"{this.key} ({this.Target.GetType().Name})";
+            if (this.hasError)
+            {
+                return $"{this.DisplayName} (Invalid resource definition)";
+            }
+
+            if (ReferenceEquals(this.key, this.Target))
+            {
+                return this.DisplayName;
+            }
+
+            return $"{this.DisplayName} ({this.Target.GetType().Name})";
         }
     }
 }

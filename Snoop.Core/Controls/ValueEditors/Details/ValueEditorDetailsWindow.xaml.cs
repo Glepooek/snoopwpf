@@ -1,7 +1,6 @@
 ﻿namespace Snoop.Controls.ValueEditors.Details
 {
     using System.Windows;
-    using Snoop.Infrastructure.Extensions;
 
     public partial class ValueEditorDetailsWindow
     {
@@ -12,9 +11,9 @@
             this.InitializeComponent();
         }
 
-        public ValueEditor ValueEditor
+        public ValueEditor? ValueEditor
         {
-            get => (ValueEditor)this.GetValue(ValueEditorProperty);
+            get => (ValueEditor?)this.GetValue(ValueEditorProperty);
             set => this.SetValue(ValueEditorProperty, value);
         }
 
