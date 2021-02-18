@@ -11,6 +11,7 @@ namespace Snoop.InjectorLauncher
     using System.Reflection;
     using CommandLine;
     using Snoop.Data;
+    using Snoop.Infrastructure;
 
     public static class Program
     {
@@ -24,15 +25,20 @@ namespace Snoop.InjectorLauncher
 
         private static int Run(InjectorLauncherCommandLineOptions commandLineOptions)
         {
+            if (commandLineOptions.Debug)
+            {
+                Debugger.Launch();
+            }
+
+            if (commandLineOptions.AttachConsoleToParent)
+            {
+                ConsoleHelper.AttachConsoleToParentProcessOrAllocateNewOne();
+            }
+
             Injector.LogMessage("Starting the injection process...", false);
 
             try
             {
-                if (commandLineOptions.Debug)
-                {
-                    Debugger.Launch();
-                }
-
                 var processWrapper = ProcessWrapper.From(commandLineOptions.TargetPID, new IntPtr(commandLineOptions.TargetHwnd));
 
                 if (processWrapper is null)
@@ -41,18 +47,19 @@ namespace Snoop.InjectorLauncher
                     return 1;
                 }
 
-                // Check for target process and our bitness.
+                // Check for target process and our architecture.
                 // If they don't match we redirect everything to the appropriate injector launcher.
                 {
-                    var currentProcess = Process.GetCurrentProcess();
-                    var currentProcessBitness = ProcessWrapper.GetBitnessAsString(currentProcess);
-                    if (processWrapper.Bitness.Equals(currentProcessBitness) == false)
+                    using var currentProcess = Process.GetCurrentProcess();
+                    var currentProcessArchitecture = NativeMethods.GetArchitectureWithoutException(currentProcess);
+                    if (processWrapper.Architecture.Equals(currentProcessArchitecture, StringComparison.Ordinal) == false)
                     {
-                        Injector.LogMessage("Target process and injector process have different bitness, trying to redirect to secondary process...");
+                        Injector.LogMessage("Target process and injector process have different architectures, trying to redirect to secondary process...");
 
-                        var originalProcessFileName = currentProcess.MainModule.ModuleName;
-                        var correctBitnessFileName = originalProcessFileName.Replace(currentProcessBitness, processWrapper.Bitness);
-                        var processStartInfo = new ProcessStartInfo(currentProcess.MainModule.FileName.Replace(originalProcessFileName, correctBitnessFileName), Parser.Default.FormatCommandLine(commandLineOptions))
+                        var originalProcessFileName = currentProcess.MainModule!.ModuleName!;
+                        #pragma warning disable CA1307
+                        var correctArchitectureFileName = originalProcessFileName.Replace(currentProcessArchitecture, processWrapper.Architecture);
+                        var processStartInfo = new ProcessStartInfo(currentProcess!.MainModule!.FileName!.Replace(originalProcessFileName, correctArchitectureFileName), Parser.Default.FormatCommandLine(commandLineOptions))
                         {
                             CreateNoWindow = true,
                             WorkingDirectory = currentProcess.StartInfo.WorkingDirectory
@@ -124,7 +131,7 @@ namespace Snoop.InjectorLauncher
             }
 
             var thisAssemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            return Path.Combine(thisAssemblyDirectory, processWrapper.SupportedFrameworkName, $"{assemblyNameOrFullPath}.dll");
+            return Path.Combine(thisAssemblyDirectory!, processWrapper.SupportedFrameworkName, $"{assemblyNameOrFullPath}.dll");
         }
     }
 }

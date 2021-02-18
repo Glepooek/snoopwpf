@@ -4,6 +4,7 @@ namespace Snoop.Data
     using System.Diagnostics;
     using System.IO;
     using System.Xml.Serialization;
+    using Snoop.Infrastructure;
 
     public sealed class TransientSettingsData
     {
@@ -13,7 +14,7 @@ namespace Snoop.Data
         {
             this.MultipleAppDomainMode = MultipleAppDomainMode.Ask;
             this.MultipleDispatcherMode = MultipleDispatcherMode.Ask;
-            this.SetWindowOwner = true;
+            this.SetOwnerWindow = true;
         }
 
         public static TransientSettingsData? Current { get; private set; }
@@ -24,7 +25,7 @@ namespace Snoop.Data
 
         public MultipleDispatcherMode MultipleDispatcherMode { get; set; }
 
-        public bool SetWindowOwner { get; set; }
+        public bool SetOwnerWindow { get; set; }
 
         public long TargetWindowHandle { get; set; }
 
@@ -32,7 +33,7 @@ namespace Snoop.Data
         {
             var settingsFile = Path.GetTempFileName();
 
-            Trace.WriteLine($"Writing transient settings file to \"{settingsFile}\"");
+            LogHelper.WriteLine($"Writing transient settings file to \"{settingsFile}\"");
 
             using (var stream = new FileStream(settingsFile, FileMode.Create))
             {
@@ -54,11 +55,11 @@ namespace Snoop.Data
 
         public static TransientSettingsData LoadCurrent(string settingsFile)
         {
-            Trace.WriteLine($"Loading transient settings file from \"{settingsFile}\"");
+            LogHelper.WriteLine($"Loading transient settings file from \"{settingsFile}\"");
 
             using (var stream = new FileStream(settingsFile, FileMode.Open))
             {
-                return Current = (TransientSettingsData)serializer.Deserialize(stream);
+                return Current = (TransientSettingsData?)serializer.Deserialize(stream) ?? new TransientSettingsData();
             }
         }
     }

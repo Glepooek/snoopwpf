@@ -12,6 +12,7 @@ namespace Snoop.Controls
     using System.Windows.Controls;
     using System.Windows.Data;
     using Snoop.Data.Tree;
+    using Snoop.Infrastructure;
     using Snoop.Windows;
 
     public class ProperTreeView : TreeView
@@ -137,16 +138,16 @@ namespace Snoop.Controls
             // Check whether the tree is too deep.
             try
             {
-                var treeView = (ProperTreeView?)this.treeView.Target;
-                if (treeView is null
-                    || treeView.ApplyReduceDepthFilterIfNeeded(this) == false)
+                var targetTreeView = (ProperTreeView?)this.treeView.Target;
+                if (targetTreeView is null
+                    || targetTreeView.ApplyReduceDepthFilterIfNeeded(this) == false)
                 {
                     return base.MeasureOverride(constraint);
                 }
             }
             catch (Exception exception)
             {
-                Trace.TraceWarning(exception.ToString());
+                LogHelper.WriteWarning(exception);
             }
 
             return new Size(0, 0);
@@ -157,16 +158,16 @@ namespace Snoop.Controls
             // Check whether the tree is too deep.
             try
             {
-                var treeView = (ProperTreeView?)this.treeView.Target;
-                if (treeView is null
-                    || treeView.ApplyReduceDepthFilterIfNeeded(this) == false)
+                var targetTreeView = (ProperTreeView?)this.treeView.Target;
+                if (targetTreeView is null
+                    || targetTreeView.ApplyReduceDepthFilterIfNeeded(this) == false)
                 {
                     return base.ArrangeOverride(arrangeBounds);
                 }
             }
             catch (Exception exception)
             {
-                Trace.TraceWarning(exception.ToString());
+                LogHelper.WriteWarning(exception);
             }
 
             return new Size(0, 0);

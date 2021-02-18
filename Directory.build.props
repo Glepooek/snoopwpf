@@ -2,6 +2,7 @@
   <PropertyGroup>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -12,7 +13,7 @@
     <LangVersion>preview</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>
-    <NoWarn>$(NoWarn);NU1503;NETSDK1138;MSB3277</NoWarn>
+    <NoWarn>$(NoWarn);NU1503;NETSDK1138;MSB3277;CA1021;CA1063;CA1816</NoWarn>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 

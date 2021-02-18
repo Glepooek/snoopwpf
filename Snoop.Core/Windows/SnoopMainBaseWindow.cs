@@ -1,13 +1,16 @@
 ﻿namespace Snoop.Windows
 {
-    using System.ComponentModel;
+    using System;
     using System.Diagnostics;
     using System.Windows;
     using System.Windows.Forms.Integration;
+    using Snoop.Data;
     using Snoop.Infrastructure;
 
     public abstract class SnoopMainBaseWindow : SnoopBaseWindow
     {
+        private Window? ownerWindow;
+
         public abstract object? Target { get; set; }
 
         public bool Inspect()
@@ -30,7 +33,7 @@
 
                 // This path should only be hit if we don't find a root in some dispatcher or app domain.
                 // This is not really critical as not every dispatcher/app domain must meet this requirement.
-                Trace.WriteLine("Can't find a current application or a PresentationSource root visual.");
+                LogHelper.WriteLine("Can't find a current application or a PresentationSource root visual.");
 
                 return false;
             }
@@ -46,26 +49,41 @@
 
             this.Load(rootToInspect);
 
-            this.Owner = SnoopWindowUtils.FindOwnerWindow(this);
+            this.ownerWindow = SnoopWindowUtils.FindOwnerWindow(this);
 
-            Trace.WriteLine("Showing snoop UI...");
+            if (TransientSettingsData.Current?.SetOwnerWindow == true)
+            {
+                this.Owner = this.ownerWindow;
+            }
+            else if (this.ownerWindow is not null)
+            {
+                // if we have an owner window, but the owner should not be set, we still have to close ourself if the potential owner window got closed
+                this.ownerWindow.Closed += this.OnOwnerWindowOnClosed;
+            }
+
+            LogHelper.WriteLine("Showing snoop UI...");
 
             this.Show();
             this.Activate();
 
-            Trace.WriteLine("Shown and activated snoop UI.");
+            LogHelper.WriteLine("Shown and activated snoop UI.");
         }
 
-        protected override void OnClosing(CancelEventArgs e)
+        private void OnOwnerWindowOnClosed(object? o, EventArgs eventArgs)
         {
-            base.OnClosing(e);
-
-            if (e.Cancel)
+            if (this.ownerWindow is not null)
             {
-                return;
+                this.ownerWindow.Closed -= this.OnOwnerWindowOnClosed;
             }
 
+            this.Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
             ExceptionHandler.RemoveExceptionHandler(this.Dispatcher);
+
+            base.OnClosed(e);
         }
 
         protected abstract void Load(object rootToInspect);
