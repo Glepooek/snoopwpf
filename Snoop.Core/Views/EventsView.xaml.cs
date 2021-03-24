@@ -21,7 +21,7 @@ namespace Snoop.Views
     using Snoop.Infrastructure;
     using Snoop.Windows;
 
-    public partial class EventsView : INotifyPropertyChanged
+    public partial class EventsView : INotifyPropertyChanged, IDisposable
     {
         public static readonly RoutedCommand ClearCommand = new(nameof(ClearCommand), typeof(EventsView));
         public static readonly RoutedCommand ResetEventTrackersToDefaultCommand = new(nameof(ResetEventTrackersToDefaultCommand), typeof(EventsView));
@@ -168,10 +168,7 @@ namespace Snoop.Views
 
             foreach (var eventTracker in this.trackers)
             {
-                if (defaultEvents.Contains(eventTracker.RoutedEvent))
-                {
-                    eventTracker.IsEnabled = true;
-                }
+                eventTracker.IsEnabled = defaultEvents.Contains(eventTracker.RoutedEvent);
             }
         }
 
@@ -232,6 +229,14 @@ namespace Snoop.Views
 
             cvs.View.Refresh();
             return cvs.View;
+        }
+
+        public void Dispose()
+        {
+            foreach (var tracker in this.trackers)
+            {
+                tracker.Dispose();
+            }
         }
     }
 }
