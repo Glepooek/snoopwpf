@@ -54,7 +54,7 @@ namespace Snoop.Controls
 
             this.CommandBindings.Add(new CommandBinding(NavigateToAssemblyInExplorerCommand, this.HandleNavigateToAssemblyInExplorer, this.CanNavigateToAssemblyInExplorer));
             this.CommandBindings.Add(new CommandBinding(UpdateBindingErrorCommand, this.HandleUpdateBindingError, this.CanUpdateBindingError));
-            
+
             // watch for mouse "back" button
             this.MouseDown += this.MouseDownHandler;
             this.KeyDown += this.PropertyInspector_KeyDown;
@@ -214,7 +214,7 @@ namespace Snoop.Controls
             return delvePath.ToString();
         }
 
-        private Type? GetCurrentDelveType(Type rootTargetType)
+        private BindableType? GetCurrentDelveType(Type rootTargetType)
         {
             if (this.delvePathList.Count > 0)
             {
@@ -262,7 +262,7 @@ namespace Snoop.Controls
             }
         }
 
-        public Type? DelveType
+        public BindableType? DelveType
         {
             get
             {
@@ -276,7 +276,7 @@ namespace Snoop.Controls
             }
         }
 
-        public Type? Type
+        public BindableType? Type
         {
             get
             {
@@ -562,9 +562,9 @@ namespace Snoop.Controls
                         Settings.Default.UserDefinedPropertyFilterSets = this.userFilterSets;
                         Settings.Default.Save();
 
-                        #pragma warning disable INPC015
+#pragma warning disable INPC015
                         this.SelectedFilterSet = null;
-                        #pragma warning restore INPC015
+#pragma warning restore INPC015
                         this.allFilterSets = null;
 
                         // trigger the UI to re-bind to the collection, so user sees changes they just made

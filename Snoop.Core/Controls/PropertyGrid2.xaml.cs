@@ -125,7 +125,7 @@ namespace Snoop.Controls
 
         private PropertyInformation? selection;
 
-        public Type? Type
+        public BindableType? Type
         {
             get
             {
