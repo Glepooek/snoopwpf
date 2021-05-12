@@ -322,29 +322,34 @@ namespace Snoop.Windows
 
         #region Public Methods
 
-        public void ApplyReduceDepthFilter(TreeItem newRoot)
+        public void ApplyReduceDepthFilter(TreeItem? newRoot)
         {
-            if (this.reducedDepthRoot != newRoot)
+            if (this.reducedDepthRoot == newRoot)
             {
-                // Check if we already have a scheduled reduce in progress
-                if (this.reducedDepthRoot is null)
-                {
-                    this.RunInDispatcherAsync(
-                        () =>
-                        {
-                            this.TreeItems.Clear();
-                            if (this.reducedDepthRoot is not null)
-                            {
-                                this.TreeItems.Add(this.reducedDepthRoot);
-                            }
-
-                            this.reducedDepthRoot = null;
-                        }, DispatcherPriority.Background);
-                }
-
-                this.reducedDepthRoot = newRoot;
+                return;
             }
+
+            // Check if we already have a scheduled reduce in progress
+            if (this.IsReduceInProgress == false)
+            {
+                this.RunInDispatcherAsync(
+                    () =>
+                    {
+                        this.TreeItems.Clear();
+
+                        if (this.reducedDepthRoot is not null)
+                        {
+                            this.TreeItems.Add(this.reducedDepthRoot);
+                        }
+
+                        this.reducedDepthRoot = null;
+                    }, DispatcherPriority.Background);
+            }
+
+            this.reducedDepthRoot = newRoot;
         }
+
+        public bool IsReduceInProgress => this.reducedDepthRoot is not null;
 
         /// <summary>
         /// Loop through the properties in the current PropertyGrid and save away any properties
@@ -615,6 +620,12 @@ namespace Snoop.Windows
             var isAltPressed = currentModifiers.HasFlag(ModifierKeys.Alt);
 
             if (isControlPressed == false)
+            {
+                return;
+            }
+
+            if (isShiftPressed == false
+                && isAltPressed == false)
             {
                 return;
             }

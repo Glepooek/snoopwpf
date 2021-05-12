@@ -31,10 +31,13 @@
             this.diagnosticProviders.Add(new NonVirtualizedListsDiagnosticProvider());
             this.diagnosticProviders.Add(new UnresolvedDynamicResourceDiagnosticProvider());
             this.diagnosticProviders.Add(new BindingLeakDiagnosticProvider());
+#if USE_WPF_BINDING_DIAG
+            //this.diagnosticProviders.Add(new BindingDiagnosticProvider());
+#endif
 
             foreach (var diagnosticProvider in this.diagnosticProviders)
             {
-                diagnosticProvider.PropertyChanged += this.HandleDiagnosticProviderOnPropertyChanged;
+                diagnosticProvider.PropertyChanged += this.HandleDiagnosticProviderPropertyChanged;
             }
         }
 
@@ -118,7 +121,7 @@
             {
                 foreach (var child in item.Children)
                 {
-                    this.Analyze(child);
+                    this.AnalyzeTree(child);
                 }
             }
         }
@@ -131,12 +134,12 @@
             {
                 foreach (var child in item.Children)
                 {
-                    this.Analyze(child, diagnosticProvider);
+                    this.AnalyzeTree(child, diagnosticProvider);
                 }
             }
         }
 
-        private void HandleDiagnosticProviderOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void HandleDiagnosticProviderPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName?.Equals(nameof(DiagnosticProvider.IsActive), StringComparison.Ordinal) == true
                 && sender is DiagnosticProvider diagnosticProvider)

@@ -17,6 +17,7 @@ namespace Snoop.Controls
     using System.Windows.Input;
     using JetBrains.Annotations;
     using Snoop.Core.Properties;
+    using Snoop.Data;
     using Snoop.Infrastructure;
     using Snoop.Infrastructure.Helpers;
     using Snoop.Windows;
@@ -32,6 +33,7 @@ namespace Snoop.Controls
         public static readonly RoutedCommand CopyXamlCommand = new(nameof(CopyXamlCommand), typeof(PropertyInspector));
 
         public static readonly RoutedCommand NavigateToAssemblyInExplorerCommand = new(nameof(NavigateToAssemblyInExplorerCommand), typeof(PropertyInspector));
+        public static readonly RoutedCommand OpenTypeInILSpyCommand = new(nameof(OpenTypeInILSpyCommand), typeof(PropertyInspector));
 
         public static readonly RoutedCommand UpdateBindingErrorCommand = new(nameof(UpdateBindingErrorCommand), typeof(PropertyInspector));
 
@@ -40,6 +42,8 @@ namespace Snoop.Controls
         public PropertyInspector()
         {
             this.InitializeComponent();
+
+            this.delveTypeContextMenu.DataContext = this;
 
             this.inspector = this.PropertyGrid;
             this.inspector.Filter = this.propertyFilter;
@@ -53,6 +57,7 @@ namespace Snoop.Controls
             this.CommandBindings.Add(new CommandBinding(CopyXamlCommand, this.HandleCopyXaml, this.CanCopyXaml));
 
             this.CommandBindings.Add(new CommandBinding(NavigateToAssemblyInExplorerCommand, this.HandleNavigateToAssemblyInExplorer, this.CanNavigateToAssemblyInExplorer));
+            this.CommandBindings.Add(new CommandBinding(OpenTypeInILSpyCommand, this.HandleOpenTypeInILSpy, this.CanOpenTypeInILSpy));
             this.CommandBindings.Add(new CommandBinding(UpdateBindingErrorCommand, this.HandleUpdateBindingError, this.CanUpdateBindingError));
 
             // watch for mouse "back" button
@@ -411,7 +416,7 @@ namespace Snoop.Controls
 
         private void HandleNavigateToAssemblyInExplorer(object sender, ExecutedRoutedEventArgs e)
         {
-            var assembly = ((Type)e.Parameter).Assembly;
+            var assembly = (e.Parameter as Type)?.Assembly ?? ((BindableType)e.Parameter).Assembly;
             var path = assembly.Location;
 
             if (string.IsNullOrEmpty(path))
@@ -441,7 +446,46 @@ namespace Snoop.Controls
 
         private void CanNavigateToAssemblyInExplorer(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = e.Parameter is Type;
+            e.CanExecute = e.Parameter is System.Type or BindableType;
+        }
+
+        private void HandleOpenTypeInILSpy(object sender, ExecutedRoutedEventArgs e)
+        {
+            var type = (e.Parameter as Type) ?? (BindableType)e.Parameter;
+            var assembly = type.Assembly;
+            var assemblyLocation = assembly.Location;
+
+            if (string.IsNullOrEmpty(assemblyLocation)
+                || PathHelper.TryFindPathOnPath(TransientSettingsData.Current?.ILSpyPath, "ilspy.exe", out var ilspyPath) == false)
+            {
+                return;
+            }
+
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = ilspyPath,
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Normal,
+                // https://github.com/icsharpcode/ILSpy/blob/master/doc/Command%20Line.txt
+                Arguments = $"\"{assemblyLocation}\" /navigateTo:T:{type.FullName}"
+            };
+
+            try
+            {
+                using (Process.Start(processStartInfo))
+                {
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        private void CanOpenTypeInILSpy(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = e.Parameter is System.Type or BindableType
+                && PathHelper.TryFindPathOnPath(TransientSettingsData.Current?.ILSpyPath, "ilspy.exe", out _);
         }
 
         private void CanUpdateBindingError(object sender, CanExecuteRoutedEventArgs e)
@@ -581,7 +625,7 @@ namespace Snoop.Controls
         }
 
         /// <summary>
-        /// Get or Set the collection of User filter sets.  These are the filters that are configurable by 
+        /// Get or Set the collection of User filter sets.  These are the filters that are configurable by
         /// the user, and serialized to/from app Settings.
         /// </summary>
         public PropertyFilterSet[] UserFilterSets
@@ -620,9 +664,9 @@ namespace Snoop.Controls
         }
 
         /// <summary>
-        /// Get the collection of "all" filter sets.  This is the UserFilterSets wrapped with 
+        /// Get the collection of "all" filter sets.  This is the UserFilterSets wrapped with
         /// (Default) at the start and "Edit Filters..." at the end of the collection.
-        /// This is the collection bound to in the UI 
+        /// This is the collection bound to in the UI
         /// </summary>
         public PropertyFilterSet[] AllFilterSets
         {

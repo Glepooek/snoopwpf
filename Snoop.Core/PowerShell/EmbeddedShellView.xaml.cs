@@ -63,7 +63,14 @@ namespace Snoop.PowerShell
 
                 if (targetSnoopUi is not null)
                 {
-                    embeddedShellView.Start(targetSnoopUi);
+                    try
+                    {
+                        embeddedShellView.Start(targetSnoopUi);
+                    }
+                    catch (Exception exception)
+                    {
+                        embeddedShellView.outputTextBox.AppendText(exception.ToString());
+                    }
                 }
             });
         }
@@ -172,18 +179,21 @@ namespace Snoop.PowerShell
 
         private void OnSnoopUiOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (sender is SnoopUI snoopUi)
+            if (sender is not SnoopUI snoopUi
+                || this.host is null)
             {
-                switch (e.PropertyName)
-                {
-                    case nameof(SnoopUI.CurrentSelection):
-                        this.SetVariable(ShellConstants.Selected, snoopUi.CurrentSelection);
-                        break;
+                return;
+            }
 
-                    case nameof(SnoopUI.Root):
-                        this.SetVariable(ShellConstants.Root, snoopUi.Root);
-                        break;
-                }
+            switch (e.PropertyName)
+            {
+                case nameof(SnoopUI.CurrentSelection):
+                    this.SetVariable(ShellConstants.Selected, snoopUi.CurrentSelection);
+                    break;
+
+                case nameof(SnoopUI.Root):
+                    this.SetVariable(ShellConstants.Root, snoopUi.Root);
+                    break;
             }
         }
 
