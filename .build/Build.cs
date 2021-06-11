@@ -6,6 +6,7 @@ using System.IO;
 using JetBrains.Annotations;
 using Nuke.Common;
 using Nuke.Common.CI;
+using Nuke.Common.CI.AppVeyor;
 using Nuke.Common.CI.GitHubActions;
 using Nuke.Common.Execution;
 using Nuke.Common.IO;
@@ -15,6 +16,7 @@ using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.GitVersion;
 using Nuke.Common.Tools.MSBuild;
 using Nuke.Common.Tools.NuGet;
+using Nuke.Common.Tools.SignPath;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using static Nuke.Common.Tools.MSBuild.MSBuildTasks;
@@ -80,7 +82,7 @@ class Build : NukeBuild
     [Solution(GenerateProjects = true)] readonly Solution Solution = null!;
     [Solution(GenerateProjects = true)] readonly TestHarnessSolution TestHarnessSolution = null!;
 
-    [GitVersion(Framework = "netcoreapp3.1")] readonly GitVersion? GitVersion;
+    [GitVersion(Framework = "netcoreapp3.1", NoFetch = true, NoCache = true)] readonly GitVersion? GitVersion;
 
     string AssemblySemVer => GitVersion?.AssemblySemVer ?? "1.0.0";
     string SemVer => GitVersion?.SemVer ?? "1.0.0";
@@ -214,6 +216,7 @@ class Build : NukeBuild
             var nupkg = ArtifactsDirectory / $"{ProjectName}.{NuGetVersion}.nupkg";
 
             CheckSumFiles.Add(nupkg);
+            AppVeyor.Instance?.PushArtifact(nupkg);
 
             {
                 CompressionTasks.UncompressZip(nupkg, tempDirectory);
@@ -221,6 +224,7 @@ class Build : NukeBuild
                 var outputFile = ArtifactsDirectory / $"{ProjectName}.{NuGetVersion}.zip";
                 CompressionTasks.Compress(tempDirectory / "tools", outputFile, info => info.Name.Contains("chocolatey") == false && info.Name != "VERIFICATION.txt");
                 CheckSumFiles.Add(outputFile);
+                AppVeyor.Instance?.PushArtifact(outputFile);
             }
         });
 
@@ -245,6 +249,7 @@ class Build : NukeBuild
             lightProcess.AssertZeroExitCode();
 
             CheckSumFiles.Add(outputFile);
+            AppVeyor.Instance?.PushArtifact(outputFile);
         });
 
     [PublicAPI]
@@ -259,11 +264,35 @@ class Build : NukeBuild
                 Logger.Info(FenceOutput);
                 Logger.Info($"CheckSum for \"{item}\".");
                 Logger.Info($"SHA256 \"{checkSum}\".");
-                File.WriteAllText(item + ".sha256", checkSum);
+                var checkSumFile = item + ".sha256";
+                File.WriteAllText(checkSumFile, checkSum);
+                AppVeyor.Instance?.PushArtifact(checkSumFile);
                 Logger.Info(FenceOutput);
             }
         });
 
+    [Secret]
+    [Parameter]
+    string? SignPathAuthToken;
+    [Parameter]
+    string? SignPathSigningPolicySlug;
+    [Parameter]
+    string? SignPathProjectSlug;
+    [Parameter]
+    string? SignPathOrganizationId;
+
+    Target SignArtifacts => _ => _
+        .Requires(() => SignPathAuthToken)
+        .OnlyWhenStatic(() => AppVeyor.Instance != null)
+        .After(Setup)
+        .Executes(async () =>
+        {
+            // ProcessTasks.StartProcess("powershell", $"./.build/SignPath.ps1 {SignPathAuthToken} {SignPathOrganizationId} {SignPathProjectSlug} {SignPathSigningPolicySlug}")
+            //     .AssertWaitForExit();
+            var result = await SignPathTasks.GetSigningRequestUrlViaAppVeyor(SignPathAuthToken, SignPathOrganizationId, SignPathProjectSlug, SignPathSigningPolicySlug);
+            Logger.Info(result);
+        });
+
     Target CI => _ => _
-        .DependsOn(Compile, Test, Pack, Setup);
+        .DependsOn(Compile, Test, Pack, Setup /*, SignArtifacts*/);
 }

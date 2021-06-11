@@ -9,8 +9,11 @@
   - Detaching Snoop now properly detaches it's exception handler
   - Fixed a performance regression in the window finder when using mouse cursor drop
   - Fixed an exception when application contains invalid resource definitions
+  - [#220](../../issues/220) - StackOverflowException in ProperTreeViewItem.ArrangeOverride
   - [#221](../../issues/221) - DPI aware Issue?
   - [#232](../../issues/232) - System.NotSupportedException
+  - [#252](../../issues/252) - Display Scaling
+  - [#254](../../issues/254) - Exception at SnoopMainBaseWindow.FindRoot() with background dispatcher hosted visual
 
 - ### Improvements
 
@@ -24,6 +27,7 @@
   - [#210](../../issues/210) - Add dedicated "Diagnostics" view
   - [#212](../../issues/212) - Add binding diagnostics
   - [#213](../../issues/213) - Add DynamicResource diagnostics
+  - [#219](../../issues/219) - Add a warning to zoomer if target has TextOptions.TextFormattingMode=Display
   - [#226](../../issues/226) - Add support for ARM/ARM64
   - [#227](../../issues/227) - Add support for .NET 6
 

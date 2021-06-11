@@ -303,7 +303,9 @@ namespace Snoop.Infrastructure
 
                 var stringValue = value.ToString() ?? string.Empty;
 
-                if (stringValue.Equals(value.GetType().ToString(), StringComparison.Ordinal))
+                var stringValueIsTypeToString = stringValue.Equals(value.GetType().ToString(), StringComparison.Ordinal);
+
+                if (stringValueIsTypeToString)
                 {
                     // Add brackets around types to distinguish them from values.
                     // Replace long type names with short type names for some specific types, for easier readability.
@@ -336,14 +338,21 @@ namespace Snoop.Infrastructure
                     // Display both the value and the resource key, if there's a key for this property.
                     if (string.IsNullOrEmpty(this.ResourceKey) == false)
                     {
-                        return string.Format("{0} {1}", this.ResourceKey, stringValue);
+                        return string.Format("{0} [{1}]", stringValue, this.ResourceKey);
                     }
 
-                    // if the value comes from a Binding, show the path in [] brackets
+                    // if the value comes from a Binding, show the binding details in [] brackets
                     if (this.IsExpression
-                        && this.Binding is BindingBase)
+                        && this.Binding is { } binding)
                     {
-                        return string.Format("[Binding] {0}", BindingDisplayHelper.BuildBindingDescriptiveString(this.Binding));
+                        var bindingDescriptiveString = BindingDisplayHelper.BuildBindingDescriptiveString(binding);
+
+                        if (stringValueIsTypeToString)
+                        {
+                            return string.Format("[Binding] {0}", bindingDescriptiveString);
+                        }
+
+                        return string.Format("{0} [Binding] {1}", stringValue, bindingDescriptiveString);
                     }
                 }
 
@@ -877,11 +886,6 @@ namespace Snoop.Infrastructure
             return null;
         }
 
-        public static List<PropertyDescriptor> GetAllProperties(object obj)
-        {
-            return GetAllProperties(obj, getAllPropertiesAttributeFilter);
-        }
-
         public static List<PropertyDescriptor> GetAllProperties(object obj, Attribute[] attributes)
         {
             var propertiesToReturn = new List<PropertyDescriptor>();
@@ -927,7 +931,7 @@ namespace Snoop.Infrastructure
                         break;
                     }
 
-                    currentObj = Activator.CreateInstance(nextBaseTypeWithDefaultConstructor)!;
+                    currentObj = Activator.CreateInstance(nextBaseTypeWithDefaultConstructor);
                 }
             }
 
@@ -998,16 +1002,17 @@ namespace Snoop.Infrastructure
 
         public int CompareTo(object? obj)
         {
-            var thisIndex = this.CollectionIndex();
             var other = obj as PropertyInformation;
 
             if (other is not null)
             {
-                var objIndex = other.CollectionIndex();
+                var thisIndex = this.CollectionIndex();
+                var otherIndex = other.CollectionIndex();
+
                 if (thisIndex >= 0
-                    && objIndex >= 0)
+                    && otherIndex >= 0)
                 {
-                    return thisIndex.CompareTo(objIndex);
+                    return thisIndex.CompareTo(otherIndex);
                 }
             }
 
