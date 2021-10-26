@@ -5,6 +5,7 @@
 
 namespace Snoop.Controls
 {
+    using System;
     using System.Windows;
     using System.Windows.Documents;
     using System.Windows.Media;
@@ -13,7 +14,7 @@ namespace Snoop.Controls
     /// <summary>
     /// Simple helper class to allow any UIElements to be used as an Adorner.
     /// </summary>
-    public class AdornerContainer : Adorner
+    public class AdornerContainer : Adorner, IDisposable
     {
         private UIElement? child;
 
@@ -25,6 +26,7 @@ namespace Snoop.Controls
         public AdornerContainer(UIElement adornedElement)
             : base(adornedElement)
         {
+            this.IsHitTestVisible = false;
             SnoopAttachedProperties.SetIsSnoopPart(this, true);
         }
 
@@ -57,6 +59,14 @@ namespace Snoop.Controls
                 this.AddVisualChild(value);
                 this.child = value;
             }
+        }
+
+        public AdornerLayer? AdornerLayer { get; set; }
+
+        public void Dispose()
+        {
+            this.Child = null;
+            this.AdornerLayer?.Remove(this);
         }
     }
 }

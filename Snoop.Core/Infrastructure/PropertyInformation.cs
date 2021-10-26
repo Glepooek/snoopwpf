@@ -188,36 +188,39 @@ namespace Snoop.Infrastructure
 
         protected virtual void OnValueChanged(DependencyPropertyChangedEventArgs e)
         {
+            if (this.isRunning == false
+                || this.ignoreUpdate)
+            {
+                return;
+            }
+
             this.Update();
 
-            if (this.isRunning)
+            if (this.breakOnChange)
             {
-                if (this.breakOnChange)
+                if (Debugger.IsAttached == false)
                 {
-                    if (Debugger.IsAttached == false)
-                    {
-                        Debugger.Launch();
-                    }
-
-                    Debugger.Break();
+                    Debugger.Launch();
                 }
 
-                this.HasChangedRecently = (e.OldValue?.Equals(e.NewValue) ?? e.OldValue == e.NewValue) == false;
+                Debugger.Break();
+            }
 
-                if (this.changeTimer is null)
+            this.HasChangedRecently = (e.OldValue?.Equals(e.NewValue) ?? e.OldValue == e.NewValue) == false;
+
+            if (this.changeTimer is null)
+            {
+                this.changeTimer = new DispatcherTimer
                 {
-                    this.changeTimer = new DispatcherTimer
-                    {
-                        Interval = TimeSpan.FromSeconds(1.5)
-                    };
-                    this.changeTimer.Tick += this.HandleChangeExpiry;
-                    this.changeTimer.Start();
-                }
-                else
-                {
-                    this.changeTimer.Stop();
-                    this.changeTimer.Start();
-                }
+                    Interval = TimeSpan.FromSeconds(1.5)
+                };
+                this.changeTimer.Tick += this.HandleChangeExpiry;
+                this.changeTimer.Start();
+            }
+            else
+            {
+                this.changeTimer.Stop();
+                this.changeTimer.Start();
             }
         }
 
@@ -257,7 +260,7 @@ namespace Snoop.Infrastructure
 
                 var targetType = this.property.PropertyType;
 
-                try 
+                try
                 {
                     this.property.SetValue(this.Target, StringValueConverter.ConvertFromString(targetType, value));
                 }
@@ -750,8 +753,15 @@ namespace Snoop.Infrastructure
             {
                 if (filter(obj, property))
                 {
-                    var prop = new PropertyInformation(obj, property, property.Name, property.DisplayName);
-                    properties.Add(prop);
+                    try
+                    {
+                        var prop = new PropertyInformation(obj, property, property.Name, property.DisplayName);
+                        properties.Add(prop);
+                    }
+                    catch (Exception e)
+                    {
+                        LogHelper.WriteError($"Failed to create PropertyInformation for property '{property.Name}' on '{obj}'.{Environment.NewLine}{e}");
+                    }
                 }
             }
 

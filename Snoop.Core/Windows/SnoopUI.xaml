@@ -22,6 +22,7 @@ All other rights reserved.
     xmlns:behaviorsTab="clr-namespace:Snoop.Views.BehaviorsTab"
     xmlns:methodsTab="clr-namespace:Snoop.Views.MethodsTab"
     xmlns:debugListenerTab="clr-namespace:Snoop.Views.DebugListenerTab"
+    xmlns:selectionHighlight="clr-namespace:Snoop.Infrastructure.SelectionHighlight"
     mc:Ignorable="d"
 	Title="Snoop"
     MinWidth="480"
@@ -138,15 +139,23 @@ All other rights reserved.
                 <MenuItem Style="{x:Null}"
                           Header="_Tracking options">
                     <MenuItem Style="{x:Null}"
-                              Header="Handle _CTRL + ALT"
+                              Header="Skip template parts"
                               ToolTip="When enabled and pressed tries to skip template parts."
                               IsCheckable="True"
-                              IsChecked="{Binding IsHandlingCTRL_ALT}" />
+                              IsChecked="{Binding SkipTemplateParts}" />
                     <MenuItem Style="{x:Null}"
                               Header="Handle CTRL + _SHIFT"
                               ToolTip="When enabled and pressed tracks all parts of the UI."
                               IsCheckable="True"
                               IsChecked="{Binding IsHandlingCTRL_SHIFT}" />
+                    <Separator />
+                    <MenuItem Style="{x:Null}"
+                              Header="Highlight selected item"
+                              IsCheckable="True"
+                              IsChecked="{Binding HighlightSelectedItem, Source={x:Static selectionHighlight:SelectionHighlightOptions.Default}}" />
+                    <MenuItem Style="{x:Null}"
+                              Header="Highlight options ..."
+                              Click="HandleHighlightOptions_OnClick" />
                 </MenuItem>
 				<MenuItem Style="{x:Null}"
 				          Header="_Debug">

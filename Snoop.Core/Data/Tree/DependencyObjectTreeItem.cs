@@ -10,10 +10,9 @@ namespace Snoop.Data.Tree
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Data;
-    using System.Windows.Documents;
     using System.Windows.Media;
-    using Snoop.Controls;
     using Snoop.Infrastructure;
+    using Snoop.Infrastructure.SelectionHighlight;
 
     /// <summary>
     /// Main class that represents a visual in the visual tree
@@ -22,12 +21,13 @@ namespace Snoop.Data.Tree
     {
         private static readonly Attribute[] propertyFilterAttributes = { new PropertyFilterAttribute(PropertyFilterOptions.All) };
 
-        private AdornerContainer? adornerContainer;
+        private IDisposable? selectionHighlight;
 
         public DependencyObjectTreeItem(DependencyObject target, TreeItem? parent, TreeService treeService)
             : base(target, parent, treeService)
         {
             this.DependencyObject = target;
+
             this.Visual = target as Visual;
         }
 
@@ -104,44 +104,18 @@ namespace Snoop.Data.Tree
 
         protected override void OnIsSelectedChanged()
         {
-            if (this.Visual is null)
-            {
-                return;
-            }
-
             // Add adorners for the visual this is representing.
-            var adornerLayer = AdornerLayer.GetAdornerLayer(this.Visual);
-
-            if (adornerLayer is not null
-                && this.Visual is UIElement visualElement)
+            if (this.Target is DependencyObject dependencyObject)
             {
                 if (this.IsSelected
-                    && this.adornerContainer is null)
+                    && this.selectionHighlight is null)
                 {
-                    var border = new Border
-                    {
-                        BorderThickness = new Thickness(4),
-                        IsHitTestVisible = false
-                    };
-
-                    var borderColor = new Color
-                    {
-                        ScA = .3f,
-                        ScR = 1
-                    };
-                    border.BorderBrush = new SolidColorBrush(borderColor);
-
-                    this.adornerContainer = new AdornerContainer(visualElement)
-                    {
-                        Child = border
-                    };
-                    adornerLayer.Add(this.adornerContainer);
+                    this.selectionHighlight = SelectionHighlightFactory.CreateAndAttachSelectionHighlight(dependencyObject);
                 }
-                else if (this.adornerContainer is not null)
+                else if (this.selectionHighlight is not null)
                 {
-                    adornerLayer.Remove(this.adornerContainer);
-                    this.adornerContainer.Child = null;
-                    this.adornerContainer = null;
+                    (this.selectionHighlight as IDisposable)?.Dispose();
+                    this.selectionHighlight = null;
                 }
             }
         }
