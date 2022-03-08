@@ -1,5 +1,16 @@
 ﻿# Changelog for Snoop
 
+## 5.0.0
+
+- ### Breaking changes
+
+  - Dropped support for all .NET versions prior to .NET 4.5.2
+
+- ### Bug fixes
+
+  - Editing Color? values works now
+  - [#313](../../issues/313) - Error: Collection was modified; enumeration operation may not execute.
+
 ## 4.0.1
 
 - ### Bug fixes
