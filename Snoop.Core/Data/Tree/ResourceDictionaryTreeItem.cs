@@ -6,7 +6,6 @@
 namespace Snoop.Data.Tree
 {
     using System.ComponentModel;
-    using System.Windows;
     using System.Windows.Data;
 
     public class ResourceDictionaryTreeItem : TreeItem
@@ -14,10 +13,10 @@ namespace Snoop.Data.Tree
         private static readonly SortDescription dictionarySortDescription = new(nameof(SortOrder), ListSortDirection.Ascending);
         private static readonly SortDescription displayNameSortDescription = new(nameof(DisplayName), ListSortDirection.Ascending);
 
-        private readonly ResourceDictionary dictionary;
+        private readonly ResourceDictionaryWrapper dictionary;
         private TreeItem? placeholderChild;
 
-        public ResourceDictionaryTreeItem(ResourceDictionary dictionary, TreeItem? parent, TreeService treeService)
+        public ResourceDictionaryTreeItem(ResourceDictionaryWrapper dictionary, TreeItem? parent, TreeService treeService)
             : base(dictionary, parent, treeService)
         {
             this.dictionary = dictionary;
@@ -32,17 +31,7 @@ namespace Snoop.Data.Tree
             return null;
         }
 
-        protected override string GetName()
-        {
-            var source = this.dictionary.Source?.ToString();
-
-            if (string.IsNullOrEmpty(source))
-            {
-                return base.GetName();
-            }
-
-            return source!;
-        }
+        protected override string GetName() => $"{this.dictionary.Source} from {this.dictionary.Origin}";
 
         protected override void ReloadCore()
         {
@@ -88,7 +77,7 @@ namespace Snoop.Data.Tree
 
             foreach (var key in resourceDictionary.Keys)
             {
-                resourceDictionary.TryGetValue(key, out var item, out var exception);
+                resourceDictionary.ResourceDictionary.TryGetValue(key, out var item, out var exception);
 
                 if (item is not null
                     || exception is not null
@@ -112,11 +101,17 @@ namespace Snoop.Data.Tree
 
         public override string ToString()
         {
-            var source = this.dictionary.Source?.ToString() ?? "Runtime Dictionary";
+            if (this.dictionary.MergedDictionaries.Count == 0)
+            {
+                return $"{this.dictionary.Keys.Count} resources ({this.Name})";
+            }
 
-            var childrenCount = this.dictionary.MergedDictionaries.Count + this.dictionary.Keys.Count;
+            if (this.dictionary.Keys.Count == 0)
+            {
+                return $"{this.dictionary.MergedDictionaries.Count} dictionaries ({this.Name})";
+            }
 
-            return $"{childrenCount} resources ({source})";
+            return $"{this.dictionary.Keys.Count} resources, {this.dictionary.MergedDictionaries.Count} dictionaries ({this.Name})";
         }
     }
 

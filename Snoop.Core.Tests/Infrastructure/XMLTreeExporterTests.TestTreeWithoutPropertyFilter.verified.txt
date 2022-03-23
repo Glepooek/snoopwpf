@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-16" standalone="yes"?>
-<node name="" displayName="" targetType="System.Windows.Controls.StackPanel">
+<node name="" displayName=" (StackPanel)" targetType="System.Windows.Controls.StackPanel">
   <properties>
     <property displayName="ActualHeight" value="0" />
     <property displayName="ActualWidth" value="0" />
@@ -51,6 +51,7 @@
     <property displayName="ContextMenuService.VerticalOffset" value="0" />
     <property displayName="Cursor" value="null" />
     <property displayName="DataContext" value="null" />
+    <property displayName="DefaultStyleKey" value="null" />
     <property displayName="DependencyObjectType" value="System.Windows.DependencyObjectType" />
     <property displayName="DesiredSize" value="0,0" />
     <property displayName="Dispatcher" value="System.Windows.Threading.Dispatcher" />
@@ -239,7 +240,7 @@
     <property displayName="XmlAttributeProperties.XmlnsDefinition" value="http://schemas.microsoft.com/winfx/2006/xaml" />
     <property displayName="XmlAttributeProperties.XmlnsDictionary" value="null" />
   </properties>
-  <node name="" displayName="" targetType="System.Windows.Controls.TextBlock">
+  <node name="" displayName=" (TextBlock)" targetType="System.Windows.Controls.TextBlock">
     <properties>
       <property displayName="ActualHeight" value="0" />
       <property displayName="ActualWidth" value="0" />
@@ -289,6 +290,7 @@
       <property displayName="ContextMenuService.VerticalOffset" value="0" />
       <property displayName="Cursor" value="null" />
       <property displayName="DataContext" value="null" />
+      <property displayName="DefaultStyleKey" value="System.Windows.Controls.TextBlock" />
       <property displayName="DependencyObjectType" value="System.Windows.DependencyObjectType" />
       <property displayName="DesiredSize" value="0,0" />
       <property displayName="Dispatcher" value="System.Windows.Threading.Dispatcher" />
@@ -478,7 +480,7 @@
       <property displayName="XmlAttributeProperties.XmlnsDictionary" value="null" />
     </properties>
   </node>
-  <node name="" displayName="" targetType="System.Windows.Controls.Border">
+  <node name="" displayName=" (Border)" targetType="System.Windows.Controls.Border">
     <properties>
       <property displayName="ActualHeight" value="0" />
       <property displayName="ActualWidth" value="0" />
@@ -531,6 +533,7 @@
       <property displayName="CornerRadius" value="0,0,0,0" />
       <property displayName="Cursor" value="null" />
       <property displayName="DataContext" value="null" />
+      <property displayName="DefaultStyleKey" value="null" />
       <property displayName="DependencyObjectType" value="System.Windows.DependencyObjectType" />
       <property displayName="DesiredSize" value="0,0" />
       <property displayName="Dispatcher" value="System.Windows.Threading.Dispatcher" />
@@ -709,7 +712,7 @@
       <property displayName="XmlAttributeProperties.XmlnsDefinition" value="http://schemas.microsoft.com/winfx/2006/xaml" />
       <property displayName="XmlAttributeProperties.XmlnsDictionary" value="null" />
     </properties>
-    <node name="" displayName="" targetType="System.Windows.Controls.CheckBox">
+    <node name="" displayName=" (CheckBox)" targetType="System.Windows.Controls.CheckBox">
       <properties>
         <property displayName="ActualHeight" value="0" />
         <property displayName="ActualWidth" value="0" />
@@ -768,6 +771,7 @@
         <property displayName="ContextMenuService.VerticalOffset" value="0" />
         <property displayName="Cursor" value="null" />
         <property displayName="DataContext" value="null" />
+        <property displayName="DefaultStyleKey" value="System.Windows.Controls.CheckBox" />
         <property displayName="DependencyObjectType" value="System.Windows.DependencyObjectType" />
         <property displayName="DesiredSize" value="0,0" />
         <property displayName="Dispatcher" value="System.Windows.Threading.Dispatcher" />

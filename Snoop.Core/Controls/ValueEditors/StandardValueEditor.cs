@@ -50,17 +50,13 @@ namespace Snoop.Controls.ValueEditors
 
         protected override void OnValueChanged(object? newValue)
         {
+            this.IsEditable = StringValueConverter.CanConvertFromString(this.PropertyType?.Type);
+
             this.isUpdatingValue = true;
 
             var value = this.Value;
-            if (value is not null)
-            {
-                this.StringValue = StringValueConverter.ConvertToString(value.GetType(), value) ?? string.Empty;
-            }
-            else
-            {
-                this.StringValue = string.Empty;
-            }
+
+            this.StringValue = StringValueConverter.ConvertToString(value) ?? string.Empty;
 
             this.isUpdatingValue = false;
 

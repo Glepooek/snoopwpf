@@ -1,4 +1,4 @@
-﻿namespace Snoop.Data.Tree
+namespace Snoop.Data.Tree
 {
     using System;
     using System.Collections;
@@ -74,6 +74,10 @@
                     treeItem = new AutomationPeerTreeItem(automationPeer, parent, this);
                     break;
 
+                case ResourceDictionaryWrapper resourceDictionary:
+                    treeItem = new ResourceDictionaryTreeItem(resourceDictionary, parent, this);
+                    break;
+
                 case ResourceDictionary resourceDictionary:
                     treeItem = new ResourceDictionaryTreeItem(resourceDictionary, parent, this);
                     break;
@@ -117,6 +121,8 @@
 
                     child.ExpandTo();
                 }
+
+                return this.RootTreeItem;
             }
 
             return treeItem;

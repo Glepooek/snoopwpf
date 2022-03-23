@@ -11,6 +11,7 @@ namespace Snoop.Infrastructure
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Linq;
+    using System.Reflection;
     using System.Windows;
     using System.Windows.Automation.Peers;
     using System.Windows.Controls;
@@ -24,7 +25,7 @@ namespace Snoop.Infrastructure
 
     public class PropertyInformation : DependencyObject, IComparable, INotifyPropertyChanged
     {
-        private static readonly Attribute[] getAllPropertiesAttributeFilter = { new PropertyFilterAttribute(PropertyFilterOptions.All) };
+        private static readonly Attribute[] getAllPropertiesAttributeFilter = { PropertyFilterAttribute.Default };
 
         private readonly object? component;
         private readonly bool isCopyable;
@@ -33,6 +34,8 @@ namespace Snoop.Infrastructure
         private ValueSource valueSource;
 
         private readonly PropertyDescriptor? property;
+        private bool wasTriedAsDependencyProperty;
+        private DependencyProperty? dependencyProperty;
         private readonly string name;
         private readonly string displayName;
         private bool isLocallySet;
@@ -273,7 +276,7 @@ namespace Snoop.Infrastructure
             }
         }
 
-        public string? ResourceKey
+        public object? ResourceKey
         {
             get
             {
@@ -299,15 +302,7 @@ namespace Snoop.Infrastructure
                             // Cache the resource key for this item if not cached already. This could be done for more types, but would need to optimize perf.
                             if (TypeMightHaveResourceKey(this.property.PropertyType))
                             {
-                                var resourceKey = ResourceKeyCache.GetKey(value);
-
-                                if (string.IsNullOrEmpty(resourceKey))
-                                {
-                                    resourceKey = ResourceDictionaryKeyHelpers.GetKeyOfResourceItem(dependencyObject, value);
-                                    ResourceKeyCache.Cache(value, resourceKey);
-                                }
-
-                                Debug.Assert(resourceKey is not null, "resourceKey is not null");
+                                var resourceKey = ResourceKeyCache.Instance.GetOrAddKey(dependencyObject, value);
 
                                 return resourceKey;
                             }
@@ -369,7 +364,7 @@ namespace Snoop.Infrastructure
                 if (this.Target is DependencyObject)
                 {
                     // Display both the value and the resource key, if there's a key for this property.
-                    if (string.IsNullOrEmpty(this.ResourceKey) == false)
+                    if (ResourceKeyHelper.IsValidResourceKey(this.ResourceKey))
                     {
                         return $"{stringValue} [{this.ResourceKey}]";
                     }
@@ -498,8 +493,13 @@ namespace Snoop.Infrastructure
                 if (this.property is null)
                 {
                     // if this is a PropertyInformation object constructed for an item in a collection
-                    //return false;
                     return this.isCopyable;
+                }
+
+                if (this.Target is SetterBase { IsSealed: true }
+                    or Style { IsSealed: true })
+                {
+                    return false;
                 }
 
                 return this.property.IsReadOnly == false;
@@ -618,16 +618,18 @@ namespace Snoop.Infrastructure
         {
             get
             {
-                if (this.property is not null)
+                if (this.dependencyProperty is not null)
                 {
-                    // in order to be a DependencyProperty, the object must first be a regular property,
-                    // and not an item in a collection.
+                    return this.dependencyProperty;
+                }
 
-                    var dpd = DependencyPropertyDescriptor.FromProperty(this.property);
-                    if (dpd is not null)
-                    {
-                        return dpd.DependencyProperty;
-                    }
+                if (this.property is not null
+                    && this.wasTriedAsDependencyProperty == false)
+                {
+                    this.wasTriedAsDependencyProperty = true;
+                    this.dependencyProperty = DependencyPropertyDescriptor.FromProperty(this.property)?.DependencyProperty;
+
+                    return this.dependencyProperty;
                 }
 
                 return null;
@@ -770,6 +772,18 @@ namespace Snoop.Infrastructure
                 }
             }
 
+            if (obj is FrameworkElement
+                or FrameworkContentElement)
+            {
+                {
+                    const string propertyName = "DefaultStyleKey";
+                    if (obj.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is not null)
+                    {
+                        properties.Add(new(obj, TypeDescriptor.CreateProperty(obj.GetType(), propertyName, typeof(Style)), propertyName, propertyName));
+                    }
+                }
+            }
+
             // sort the properties before adding potential collection items
             properties.Sort();
 
@@ -835,14 +849,17 @@ namespace Snoop.Infrastructure
                 return null;
             }
 
-            if (ResourceKeyCache.Contains(obj))
             {
-                var key = ResourceKeyCache.GetKey(obj);
-                var prop = new PropertyInformation(key!, null, "x:Key", key!, isCopyable: true);
-                return new List<PropertyInformation>
+                var key = ResourceKeyCache.Instance.GetKey(obj);
+
+                if (ResourceKeyHelper.IsValidResourceKey(key))
                 {
-                    prop
-                };
+                    var prop = new PropertyInformation(key!, null, "x:Key", key!, isCopyable: true);
+                    return new List<PropertyInformation>
+                    {
+                        prop
+                    };
+                }
             }
 
             if (obj is string

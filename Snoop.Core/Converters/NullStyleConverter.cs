@@ -4,6 +4,7 @@
     using System.Globalization;
     using System.Windows;
     using System.Windows.Data;
+    using Snoop.Infrastructure.Helpers;
 
     [ValueConversion(typeof(object), typeof(object))]
     [ValueConversion(typeof(object), typeof(Style))]
@@ -18,20 +19,12 @@
                 return value;
             }
 
-            // If the target does not have an explicit style, try to find the default style
+            return parameter switch
             {
-                if (parameter is FrameworkElement fe)
-                {
-                    return fe.TryFindResource(fe.GetType()) as Style;
-                }
-
-                if (parameter is FrameworkContentElement fec)
-                {
-                    return fec.TryFindResource(fec.GetType()) as Style;
-                }
-            }
-
-            return null;
+                FrameworkElement fe => FrameworkElementHelper.GetStyle(fe),
+                FrameworkContentElement fce => FrameworkElementHelper.GetStyle(fce),
+                _ => null
+            };
         }
 
         public object ConvertBack(object? value, Type? targetType, object? parameter, CultureInfo? culture)

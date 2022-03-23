@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-16" standalone="yes"?>
-<node name="" displayName="" targetType="System.Windows.Controls.StackPanel">
+<node name="" displayName=" (StackPanel)" targetType="System.Windows.Controls.StackPanel">
   <properties>
     <property displayName="ActualHeight" value="0" />
     <property displayName="ActualWidth" value="0" />
@@ -51,6 +51,7 @@
     <property displayName="ContextMenuService.VerticalOffset" value="0" />
     <property displayName="Cursor" value="null" />
     <property displayName="DataContext" value="null" />
+    <property displayName="DefaultStyleKey" value="null" />
     <property displayName="DependencyObjectType" value="System.Windows.DependencyObjectType" />
     <property displayName="DesiredSize" value="0,0" />
     <property displayName="Dispatcher" value="System.Windows.Threading.Dispatcher" />
