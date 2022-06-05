@@ -98,7 +98,7 @@ namespace Snoop.Infrastructure
 
         public bool ShowDefaults { get; set; }
 
-        public bool ShowPropertiesFromUncommonTypes { get; set; }
+        public bool ShowUncommonProperties { get; set; }
 
         public PropertyFilterSet? SelectedFilterSet { get; set; }
 
@@ -106,7 +106,7 @@ namespace Snoop.Infrastructure
 
         public bool Show(PropertyInformation property)
         {
-            if (this.ShowPropertiesFromUncommonTypes == false
+            if (this.ShowUncommonProperties == false
                 && IsUncommonProperty(property))
             {
                 return false;
@@ -183,6 +183,11 @@ namespace Snoop.Infrastructure
             if (property.DependencyProperty is null)
             {
                 return false;
+            }
+
+            if (property.DependencyProperty.OwnerType.Namespace?.StartsWith("Snoop", StringComparison.Ordinal) == true)
+            {
+                return true;
             }
 
             return uncommonTypes.Contains(property.DependencyProperty.OwnerType);
